@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>多边形裁剪算法</title>
+
+</head>
+	<script src="dat.gui.js"></script>
+	<script language="JavaScript">
+        function LinkList() {
+			this.length = 0;
+			this.head = null;
+			//结点的数据结构
+			var Node = function(element) {
+				this.element = element;
+				this.next = null;
+			}
+			//实现函数的功能
+			//添加
+			this.append = function(element) {
+				var node = new Node(element);
+				var current;
+				//如果链表头指针为空指针
+				if (this.head == null) {
+					this.head = node;
+				}
+				//head point is not null
+				else {
+					current = this.head;
+					while (current.next) {
+						current = current.next;
+					}
+					//now,current is in the last position
+					current.next = node;
+				}
+				this.length += 1;
+			};
+			//删除
+			this.removeAt = function(position) {
+				var current = this.head;
+				var index = 0;
+				var previous;
+				if (position > -1 && position < this.length) {
+					if (position == 0) {
+						this.head = current.next;
+					} else {
+						//idex correspond previous
+						while (index < position) {
+							previous = current;
+							current = current.next;
+							index += 1;
+						}
+						previous.next = current.next;
+					}
+					this.length -= 1;
+					return current.element;
+				} else {
+					console.log("the position is inaccurate,remove failed!");
+				}
+			}
+			//插入
+			this.insert = function(position, element) {
+				var node = new Node(element);
+				var current = this.head;
+				var index = 0;
+				var previous;
+				//can insert this front and this rear
+				if (position > -1 && position <= this.length) {
+					if (position == 0) {
+						node.next = this.head;
+						this.head = node;
+					} else {
+						while (index < position) {
+							previous = current;
+							current = current.next;
+							index += 1;
+						}
+						previous.next = node;
+						node.next = current;
+					}
+					this.length += 1;
+					return true;
+				} else {
+					console.log("the position is inaccurate,insert failed!");
+				}
+			}
+			// look for index
+			this.indexOf = function(element) {
+				var current = this.head;
+				var index = 0;
+				while (current) {
+					if (current.element["x"] == element["x"] &&
+						current.element["y"] == element["y"]) {
+						return index;
+					} else {
+						current = current.next;
+						index += 1;
+					}
+				}
+				return -1;
+			};
+		}
+//the property of the window
+var xl, xr, yb, yt;
+		var canvas, context;
+		var point = new Array();
+		var link = new LinkList();
+
+		function init() {
+			canvas = document.getElementById("output");//画布一致！
+			context = canvas.getContext("2d");
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			
+			var controls=new function(){
+				this.draw=function(){
+					context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+					link.head=null;
+					drawWindow();
+					drawPolygon();
+				}
+				// x/y=t
+				this.Cut=function(){
+					sideCut(yt,'y','d');
+					sideCut(xr,'x','r');
+					sideCut(yb,'y','u');
+					sideCut(xl,'x','l');
+					context.clearRect(0, 0, window.innerWidth, window.innerHeight);
+					drawWindow();
+					afterDraw();
+				}
+			};
+			var gui=new dat.GUI();
+			gui.add(controls, 'draw');
+			gui.add(controls, 'Cut');
+			
+			drawWindow();
+			drawPolygon();
+		}
+
+		function drawWindow() {
+			//set the parameter of the window
+			xl = window.innerWidth / 4;
+			xr = 3 * window.innerWidth / 4;
+			yb = window.innerHeight / 4;
+			yt = window.innerHeight / 2;
+
+			context.beginPath();
+			context.moveTo(xl, yb);
+			context.lineTo(xl, yt);
+			context.lineTo(xr, yt);
+			context.lineTo(xr, yb);
+			context.closePath();
+			context.stroke();
+		}
+
+		function drawPolygon() {
+			
+			//先确定各点的坐标
+			point[0] = new Array();
+			point[0]["x"] = 3 * window.innerWidth / 8;
+			point[0]["y"] = 3 * window.innerHeight / 8;
+
+			point[1] = new Array();
+			point[1]["x"] = 5 * window.innerWidth / 8;
+			point[1]["y"] = 5 * window.innerHeight / 8;
+
+			point[2] = new Array();
+			point[2]["x"] = window.innerWidth / 2;
+			point[2]["y"] = 3 * window.innerHeight / 8;
+
+			point[3] = new Array();
+			point[3]["x"] = 7 * window.innerWidth / 8;
+			point[3]["y"] = window.innerHeight / 4;
+
+			point[4] = new Array();
+			point[4]["x"] = window.innerWidth / 2;
+			point[4]["y"] = window.innerHeight / 8;
+
+			//add these points to my link
+			for (var i = 0; i < point.length; i++)
+				link.append(point[i]);
+
+			context.beginPath();
+			context.moveTo(point[0]["x"], point[0]["y"]);
+			for (var i = 1; i < point.length; i++)
+				context.lineTo(point[i]["x"], point[i]["y"]);
+			context.closePath();
+			context.stroke();
+		}
+		//side cut algorithm
+		function sideCut(value, tag, sign) {
+			var f, s;
+			var current = link.head;
+			var flag = 0;
+			var tpoint = new Array();
+			var sum=0;
+			//calculate the node of x coordinate
+			if (tag) {
+				//traverse every point of my link table
+				while (current != null) {
+					if (current == link.head) {
+						f = current;
+					} else {
+						if (judgeIntersect(s, current, tag, value) == true) {
+							tpoint = getCoor(s, current, tag, value);
+							flag = link.indexOf(current.element);
+							link.insert(flag, tpoint);
+						}
+					}
+					s = current;
+					//remove point
+					if (!stayPoint(s.element["x"], s.element["y"], sign)) {
+						flag = link.indexOf(s.element);
+						link.removeAt(flag);
+					}
+					//the last point
+					if (current.next == null) {
+						if (judgeIntersect(s, f, tag, value) == true) {
+							tpoint = getCoor(s, f, tag, value);
+							link.append(tpoint)
+						}
+					}
+					current = current.next;
+					sum++;
+				}
+			} else {
+				console.log("side do not exist!");
+			}
+		}
+		//is stay
+		function stayPoint(x, y, sign) {
+			if (sign == 'l' && x < xl)
+				return false;
+			if (sign == 'r' && x > xr)
+				return false;
+			if (sign == 'u' && y < yb)
+				return false;
+			if (sign == 'd' && y > yt)
+				return false;
+			return true;
+		}
+		//judge whether there is a intersection
+		function judgeIntersect(s, current, tag, value) {
+			var t = 0;
+			//get the line parameter equation
+			if (tag == "x")
+				t = (value - s.element["x"]) / (current.element["x"] - s.element["x"]);
+			else
+				t = (value - s.element["y"]) / (current.element["y"] - s.element["y"])
+			if (t >= 0 && t <= 1)
+				return true;
+			return false;
+		}
+		//get the intersection coordinate
+		function getCoor(s, current, tag, value) {
+			var t = 0;
+			var tpoint = new Array();
+			if (tag == "x") {
+				t = (value - s.element["x"]) / (current.element["x"] - s.element["x"]);
+				tpoint["x"] = value;
+				tpoint["y"] = (1 - t) * s.element["y"] + t * current.element["y"]
+				return tpoint;
+			} else {
+				t = (value - s.element["y"]) / (current.element["y"] - s.element["y"]);
+				tpoint["y"] = value;
+				tpoint["x"] = (1 - t) * s.element["x"] + t * current.element["x"];
+				return tpoint;
+			}
+		}
+		function afterDraw(){
+			context.beginPath();
+			context.moveTo(link.head.element["x"],link.head.element["y"]);
+			var point=link.head.next;
+			while(point){
+				context.lineTo(point.element["x"],point.element["y"]);
+				point=point.next;
+			}
+			context.closePath();
+			context.stroke();
+		}
+
+    </script>
+
+<body onload="init()">
+    <canvas id='output' width="1024" height='768'style="background-color: rgb(40, 180, 167);"></canvas>
+</body>
+</html>

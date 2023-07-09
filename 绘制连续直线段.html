@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绘制连续直线段</title>
+    <style type="text/css">
+  
+  canvas {
+    background-color: #f29191;
+    border: 1px solid black;
+    /* NOTE: This size is changed if in iframe - see below '.iframe canvas' */
+    width: 800px;
+    height: 800px;
+    display: block;
+  }
+  
+ 
+  
+  .iframe canvas {
+    width: 100vw;
+    height: 100vh;
+    max-width: 100vw;
+    border: none;
+  }
+  
+  
+  @media (max-width: 390px) {
+   
+    canvas {
+      width: 100vw;
+    }
+    .iframe canvas {
+      width: 100vw;
+      height: 100vh;
+      border: none;
+    }
+   
+  }
+
+  
+        body {
+    margin: 0;
+    /* 不显示滚动条 */
+    overflow: hidden;
+}
+
+main canvas {
+    width: 100vw;
+    height: 100vh;
+}
+    </style>
+        
+
+</head>
+<body style="background-color: rgb(163, 255, 127);">
+    <canvas id="canvas"></canvas>
+    
+    <!-- 顶点着色器代码 -->
+<script id="vshader-source" type="vshader">
+    attribute vec4 a_Position;
+  attribute vec4 a_Color;
+  uniform mat4 u_Project;
+  varying vec4 v_Color;
+  void main() {
+      gl_Position = u_Project * a_Position;
+      v_Color = a_Color;
+  }
+      </script>
+  <!-- 片元着色器代码  -->
+  <script id="fshader-source" type="fshader">
+    precision mediump float;
+  varying vec4 v_Color;
+  void main() {
+      gl_FragColor = v_Color;
+  }
+      </script>
+</body>
+<script src="./glLINES.js"></script>
+</html>

@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>直线段裁剪算法</title>
+	</head>
+	<script src="dat.gui.js"></script>
+	<script language="JavaScript">
+        //这个代码不是基于webGl的，但是是直线段裁剪算法，里面的dat.gui.js属于Three.js GUI插件
+		//窗口的属性
+		var xl, xr, yb, yt;
+		var canvas, context;
+		//储存直线的两个端点与其相应的标志位
+		var line = new Array();
+
+		function init() {
+			canvas = document.getElementById("output");
+			context = canvas.getContext("2d");
+			canvas.width = window.innerWidth;
+			canvas.height = window.innerHeight;
+			var controls = new function() {
+				this.draw=function(){
+					context.clearRect(0,0,window.innerWidth,window.innerHeight);
+					drawWindow();
+					drawLine();
+				}
+				this.cut = function() {
+					//裁剪线段
+					cutLine();
+					context.clearRect(0,0,window.innerWidth,window.innerHeight);
+					//重新描绘
+					drawWindow();
+					afterShow();
+				}
+				
+			};
+			var gui=new dat.GUI();
+			gui.add(controls,'draw');
+			gui.add(controls,'cut');//都是界面
+			drawWindow();
+			drawLine();
+		}
+		//绘制窗口
+		function drawWindow() {
+			//设置窗口参数
+			xl = window.innerWidth / 4;
+			xr = 3 * window.innerWidth / 4;
+			yb = window.innerHeight / 4;
+			yt = window.innerHeight / 2;
+           //只有直线段裁剪我用了moveTo和lineTo
+			context.beginPath();
+			context.moveTo(xl, yb);
+			context.lineTo(xl, yt);
+			context.lineTo(xr, yt);
+			context.lineTo(xr, yb);
+			context.closePath();
+			context.stroke();
+		}
+		//画出四条线段，对应于四种情况
+		function drawLine() {
+			//完全在窗口外
+			line[0] = new Array();
+			line[0]["xb"] = window.innerWidth / 4;
+			line[0]["yb"] = window.innerHeight / 8;
+			line[0]["xg"] = window.innerWidth / 8;
+			line[0]["yg"] = window.innerHeight / 3;
+			line[0]["tagb"] = 0;
+			line[0]["tagg"] = 0;
+			line[0]["isprint"] = false;
+			//一个交点
+			line[1] = new Array();
+			line[1]["xb"] = window.innerWidth / 2;
+			line[1]["yb"] = window.innerHeight / 8;
+			line[1]["xg"] = 5 * window.innerWidth / 8;
+			line[1]["yg"] = 3 * window.innerHeight / 8;
+			line[1]["tagb"] = 0;
+			line[1]["tagg"] = 0;
+			line[1]["isprint"] = false;
+			//完全在窗口内
+			line[2] = new Array();
+			line[2]["xb"] = 3 * window.innerWidth / 8;
+			line[2]["yb"] = 5 * window.innerHeight / 16;
+			line[2]["xg"] = 5 * window.innerWidth / 8;
+			line[2]["yg"] = 7 * window.innerHeight / 16;
+			line[2]["tagb"] = 0;
+			line[2]["tagg"] = 0;
+			line[2]["isprint"] = false;
+			//与窗口有两个交点
+			line[3] = new Array();
+			line[3]["xb"] = window.innerWidth / 8;
+			line[3]["yb"] = 3 * window.innerHeight / 8;
+			line[3]["xg"] = window.innerWidth / 2;
+			line[3]["yg"] = 5 * window.innerHeight / 8;
+			line[3]["tagb"] = 0;
+			line[3]["tagg"] = 0;
+			line[3]["isprint"] = false;
+			for (var i = 0; i < 4; i++) {
+				context.moveTo(line[i]["xb"], line[i]["yb"]);
+				context.lineTo(line[i]["xg"], line[i]["yg"]);
+			}
+			context.stroke();
+			SureTag();
+		}
+		//给线段两个端点加上标记
+		function SureTag() {
+			for (var i = 0; i < 4; i++) {
+				line[i]["tagb"] = caculate(line[i]["xb"], line[i]["yb"]);
+				line[i]["tagg"] = caculate(line[i]["xg"], line[i]["yg"]);
+			}
+		}
+		//这里不在窗口内统一返回1
+		function caculate(x, y) {
+			if (x < xl) {
+				return 1;
+			} else if (x <= xr) {
+				if (y >= yb && y <= yt)
+					return 0;
+				else
+					return 1;
+			} else {
+				return 1;
+			}
+		}
+		//裁剪直线的代码
+		function cutLine() {
+			var tline=new Array();
+			for (var i = 0; i < 4; i++) {
+				//两个端点在窗口内
+				if ((line[i]["tagb"] || line[i]["tagg"]) == 0) {
+					line[i]["isprint"] = true;
+				}
+				else {
+					//两个端点都在窗口外
+					//可能没有交点，可能有两个交点,可能一个交点
+					//没有交点和一个交点都按照不在窗口内处理
+					if ((line[i]["tagb"] && line[i]["tagg"]) == 1){
+						//不在窗口内
+						if(judge(line[i])==false){
+							line[i]["isprint"]=false;
+						}
+						//在窗口内，裁剪出中间那一段线段
+						else{
+							tline=getCoor(line[i]);
+							line[i]["xb"]=tline["xb"];
+							line[i]["yb"]=tline["yb"];
+							line[i]["xg"]=tline["xg"];
+							line[i]["yg"]=tline["yg"];
+							line[i]["isprint"]=true;
+						}
+					}
+					//终止点在窗口内,裁剪
+					else if (line[i]["tagg"] == 0) {
+						tline=getCoor(line[i]);
+						line[i]["xb"]=tline["xb"];
+						line[i]["yb"]=tline["yb"];
+						line[i]["isprint"]=true;
+					} 
+					//起始点在窗口内,裁剪
+					else {
+						tline=getCoor(line[i]);
+						line[i]["xg"]=tline["xb"];
+						line[i]["yg"]=tline["yb"];
+						line[i]["isprint"]=true;
+					}
+				}
+			}
+
+		}
+		//判断是否与多边形有交点
+		function judge(line){
+			var b=new Array();
+			var maxb=0;
+			var minb=0;
+			var lineb=0;
+			var k=(line["yg"]-line["yb"])/(line["xg"]-line["xb"]);
+			//得出点斜式方程
+			//y=k*(x-line["xg"])+line["yg"]
+			//y=kx+b,b=y-kx
+			b[0]=new Array();
+			b[0]=yb-k*xl;
+			b[1]=new Array();
+			b[1]=yb-k*xr;
+			b[2]=new Array();
+			b[2]=yt-k*xr;
+			b[3]=new Array();
+			b[3]=yt-k*xl;
+			//与四个顶点相交求出截距的范围
+			maxb=Math.max(b[0],b[1],b[2],b[3]);
+			minb=Math.min(b[0],b[1],b[2],b[3]);
+			lineb=line["yg"]-k*line["xg"];
+			if(lineb>minb && lineb<maxb)
+				return true;
+			else
+				return false;
+		}
+		//获取交点的坐标，可以是一个交点或者是两个交点
+		function getCoor(line){
+			var tline=new Array();
+			tline["tag"]=0;
+			//记录是第几个交点
+			//获取直线的参数方程,判断t的范围得出与那条边相交
+			//y=(1-t)*yb+t*yg
+			//x=(1-t)*xb+t*xg
+			//分别与四条边求交点
+			var t=0;
+			
+			//y=yb
+			t=(yb-line["yb"])/(line["yg"]-line["yb"]);
+			if(t>=0 && t<=1){
+				tline["xb"]=(1-t)*line["xb"]+t*line["xg"];
+				tline["yb"]=yb;
+				tline["tag"]=1;
+			}
+			
+			//y=yt
+			t=(yt-line["yb"])/(line["yg"]-line["yb"]);
+			if(t>=0 && t<=1){
+				if(tline["tag"]==0){
+					tline["xb"]=(1-t)*line["xb"]+t*line["xg"];
+					tline["yb"]=yt;
+					tline["tag"]=1;
+				}
+				else{
+					tline["xg"]=(1-t)*line["xb"]+t*line["xg"];
+					tline["yg"]=yt;
+					tline["tag"]=2;
+					//最多有两个交点
+					return tline;
+				}
+			}
+			//x=xl
+			t=(xl-line["xb"])/(line["xg"]-line["xb"]);
+			if(t>=0&&t<=1){
+				if(tline["tag"]==0){
+					tline["xb"]=xl;
+					tline["yb"]=(1-t)*line["yb"]+t*line["yg"];
+					tline["tag"]=1;
+				}
+				else{
+					tline["xg"]=xl;
+					tline["yg"]=(1-t)*line["yb"]+t*line["yg"];
+					tline["tag"]=2;
+					//最多有两个交点
+					return tline;
+				}
+			}
+			//x=xr
+			t=(xr-line["xb"])/(line["xg"]-line["xb"]);
+			if(t>=0&&t<=1){
+				if(tline["tag"]==0){
+					tline["xb"]=xr;
+					tline["yb"]=(1-t)*line["yb"]+t*line["yg"];
+					tline["tag"]=1;
+				}
+				else{
+					tline["xg"]=xr;
+					tline["yg"]=(1-t)*line["yb"]+t*line["yg"];
+					tline["tag"]=2;
+					//最多有两个交点
+					return tline;
+				}
+			}
+			return tline;
+		}
+		function afterShow(){
+			for(var i=0;i<4;i++){
+					if(line[i]["isprint"]==true){
+					context.moveTo(line[i]["xb"],line[i]["yb"]);
+					context.lineTo(line[i]["xg"],line[i]["yg"]);
+				}
+			}
+			context.stroke();	
+		}
+		window.onload = init;
+	</script>
+	<body>
+		<canvas id="output"style="background-color: rgb(40, 180, 167);"></canvas>
+	</body>
+</html>

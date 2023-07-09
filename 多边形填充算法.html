@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>有效边表填充算法</title>
+	<style>
+		canvas {
+			border: 1px solid rgb(18, 12, 12);
+		}
+	</style>
+</head>
+<body>
+	<canvas id="canvas" width="500" height="500"></canvas>
+
+	<script>
+// 定义多边形的顶点
+var vertices = [
+			[50, 50],
+			[150, 50],
+			[150, 150],
+			[100, 200],
+			[50, 150]
+		];//不是相对坐标，就是具体的左上角（0，0）的坐标
+
+		// 定义画布和上下文
+		var canvas = document.getElementById("canvas");
+		var ctx = canvas.getContext("2d");
+
+		// 绘制多边形
+		ctx.beginPath();
+		ctx.moveTo(vertices[0][0], vertices[0][1]);
+
+		for (var i = 1; i < vertices.length; i++) {
+			ctx.lineTo(vertices[i][0], vertices[i][1]);
+		}
+
+		ctx.closePath();
+		ctx.stroke();
+
+		// 定义边表
+		var edgeTable = {};
+
+		// 计算边表
+		for (var i = 0; i < vertices.length; i++) {
+			var x1 = vertices[i][0];
+			var y1 = vertices[i][1];
+			var x2 = vertices[(i + 1) % vertices.length][0];
+			var y2 = vertices[(i + 1) % vertices.length][1];
+
+			// 排除水平边
+			if (y1 == y2) {
+				continue;
+			}
+
+			// 确定边的起点和终点
+			var ymin = Math.min(y1, y2);
+			var ymax = Math.max(y1, y2);
+			var xmin;
+            var dx;
+
+			if (y1 < y2) {
+				xmin = x1;
+				dx = (x2 - x1) / (y2 - y1);
+			} else {
+				xmin = x2;
+				dx = (x1 - x2) / (y1 - y2);
+			}
+
+			// 添加边到边表
+			if (!(ymin in edgeTable)) {
+				edgeTable[ymin] = [];
+			}
+
+			edgeTable[ymin].push({
+				ymax: ymax,
+				xmin: xmin,
+				dx: dx
+			});
+		}
+
+		// 计算填充颜色
+		//var fillColor = "#FF0000";
+        var fillColor = "yellow";
+		// 处理边表
+		for (var y in edgeTable) {
+			// 对边表按照 xmin 排序
+			edgeTable[y].sort(function(a, b) {
+				return a.xmin - b.xmin;
+			});
+
+			// 定义活动边表
+			var activeEdgeTable = [];
+
+			// 遍历当前 y 坐标下的边
+			for (var i = 0; i < edgeTable[y].length; i++) {
+				var edge = edgeTable[y][i];
+
+				// 从活动边表中删除 ymax <= y 的边
+				activeEdgeTable = activeEdgeTable.filter(function(activeEdge) {
+					return activeEdge.ymax > y;
+				});
+
+				// 添加边到活动边表
+				activeEdgeTable.push(edge);
+
+				// 对活动边表按照 xmin 排序
+				activeEdgeTable.sort(function(a, b) {
+					return a.xmin - b.xmin;
+				});
+
+				// 遍历活动边表中的奇数边，填充像素
+				for (var j = 0; j < activeEdgeTable.length; j += 2) {
+					var x1 = Math.round(activeEdgeTable[j].xmin);
+					var x2 = Math.round(activeEdgeTable[j + 1].xmin);
+
+					ctx.beginPath();
+					ctx.moveTo(x1, y);
+					ctx.lineTo(x2, y);
+					ctx.strokeStyle = fillColor;//填充颜色
+					ctx.stroke();
+				}
+
+				// 更新活动边表中的 x 坐标
+				for (var j = 0; j < activeEdgeTable.length; j++) {
+					activeEdgeTable[j].xmin += activeEdgeTable[j].dx;
+				}
+			}
+		}
+		
+	</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>绘制一定宽度的线</title>
+    
+</head>
+<body bgcolor="#E6E6FA">
+    <canvas id="canvas"></canvas>
+    <script>
+        //js代码，编码方式要保持一致！
+        //此处canvas id里面必须名字要对！
+        /*
+        我在画布上画，没在缓冲区绘制
+        此代码是用的lineto,唉我这个根本就没有锯齿状，怎么反走样
+        */
+        const canvas=document.querySelector("#canvas");
+        canvas.width=window.innerWidth;
+        canvas.height=window.innerHeight;
+        //二维画笔
+        const ctx=canvas.getContext('2d');
+        ctx.lineWidth=100;
+        //ctx.lineCap='butt'//指端点，而不是拐角，拐角是lineJoin
+        //ctx.lineCap='square'//这个不会到头，里面的线会比外面的那个线短一点
+        ctx.lineCap='round'//圆形按钮形状
+
+        //ctx.lineJoin='miter'//这个是默认的值，尖角
+        //ctx.lineJoin='round'//这个是圆角
+        ctx.lineJoin='bevel'//这个是一个斜的线断开的角
+
+        ctx.beginPath();
+        ctx.moveTo(700,100);//好原始的方法，第一个点的是moveTo，后面都是lineTo！
+        ctx.lineTo(300,400);
+        ctx.lineTo(700,400);
+        ctx.stroke();
+
+        ctx.lineWidth=3
+        ctx.strokeStyle='yellow'
+        ctx.beginPath();
+        ctx.moveTo(700,100);//好原始的方法，第一个点的是moveTo，后面都是lineTo！
+        ctx.lineTo(300,400);
+        ctx.lineTo(700,400);
+        ctx.stroke();
+    </script>
+</body>
+</html>

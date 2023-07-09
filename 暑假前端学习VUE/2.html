@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>el挂载点</title>
+</head>
+<body>
+   
+    <h2 id="app" class="app">
+       {{message}}
+       <span>{{message}}</span>
+    </h2>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    var app=new Vue({
+        el:"#app",
+       //el:".app",
+       //el:"div",
+        data:{
+            message:"黑马程序员"//靠message的值来改变，#是ID选择器，保持一致即可
+        }
+    })
+</script>
+</body>
+</html>

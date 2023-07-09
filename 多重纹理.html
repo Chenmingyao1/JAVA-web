@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title>多重纹理</title>
+</head>
+
+<body>
+  <!--通过canvas标签创建一个400px*400px大小的画布-->
+  <canvas id="webgl" width="800" height="800"></canvas>
+
+  <script>
+    //顶点着色器
+    var VSHADER_SOURCE = `
+    attribute vec4 a_Position;
+    attribute vec2 a_TexCoord;
+    varying vec2 v_TexCoord;
+    void main()
+    {
+        gl_Position = a_Position;
+        v_TexCoord = a_TexCoord;
+    }
+    `;
+    //片元着色器
+    var FSHADER_SOURCE = `
+    precision mediump float;
+    uniform sampler2D u_Sampler;
+    varying vec2 v_TexCoord;
+    void main()
+    {
+        gl_FragColor = texture2D(u_Sampler,v_TexCoord);
+    }
+    `;
+    //初始化着色器函数
+    function initShader(gl, VSHADER_SOURCE, FSHADER_SOURCE) {
+      //创建顶点着色器对象
+      var vertexShader = gl.createShader(gl.VERTEX_SHADER);
+      //创建片元着色器对象
+      var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
+      //引入顶点、片元着色器源代码
+      gl.shaderSource(vertexShader, VSHADER_SOURCE);
+      gl.shaderSource(fragmentShader, FSHADER_SOURCE);
+      //编译顶点、片元着色器
+      gl.compileShader(vertexShader);
+      gl.compileShader(fragmentShader);
+
+      //创建程序对象program
+      var program = gl.createProgram();
+      //附着顶点着色器和片元着色器到program
+      gl.attachShader(program, vertexShader);
+      gl.attachShader(program, fragmentShader);
+      //链接program
+      gl.linkProgram(program);
+      //使用program
+      gl.useProgram(program);
+      gl.program = program
+      //返回程序program对象
+      return program;
+    }
+
+    function init() {
+      //通过getElementById()方法获取canvas画布
+      var canvas = document.getElementById('webgl');
+      //通过方法getContext()获取WebGL上下文
+      var gl = canvas.getContext('webgl');
+      //初始化着色器
+      initShader(gl, VSHADER_SOURCE, FSHADER_SOURCE);
+
+      // 设置canvas的背景色
+      gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+      //清空canvas
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      //初始化顶点坐标和颜色
+      var n = initVertexBuffers(gl)
+
+      //初始化纹理
+      initTextures(gl, n)
+
+    }
+
+    //初始化顶点坐标和纹理坐标
+    function initVertexBuffers(gl) {
+      var verticesTexCoords = new Float32Array([
+        //顶点坐标   纹理坐标
+        //------\\ //----\\
+        -0.5, 0.5, 0.0, 1.0, //顶点1
+        -0.5, -0.5, 0.0, 0.0, //顶点2
+        0.5, 0.5, 1.0, 1.0, //顶点3
+        0.5, -0.5, 1.0, 0.0, //顶点4
+      ])
+
+      //创建缓冲区对象
+      var vertexTexCoordBuffer = gl.createBuffer();
+      if (!vertexTexCoordBuffer) {
+        console.log('创建缓冲区对象失败！')
+        return -1
+      }
+
+      //将顶点坐标和纹理坐标写入缓冲区对象
+      gl.bindBuffer(gl.ARRAY_BUFFER, vertexTexCoordBuffer)
+      gl.bufferData(gl.ARRAY_BUFFER, verticesTexCoords, gl.STATIC_DRAW)
+
+      //获取类型化数组中每个元素的大小
+      var FSIZE = verticesTexCoords.BYTES_PER_ELEMENT
+
+      //获取顶点着色器attribute变量a_Position的存储地址, 分配缓存并开启
+      var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+      gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 4, 0)
+      gl.enableVertexAttribArray(a_Position)
+
+      //获取顶点着色器attribute变量a_TexCoord(纹理坐标)的存储地址, 分配缓存并开启
+      var a_TexCoord = gl.getAttribLocation(gl.program, 'a_TexCoord');
+      gl.vertexAttribPointer(a_TexCoord, 2, gl.FLOAT, false, FSIZE * 4, FSIZE * 2)
+      gl.enableVertexAttribArray(a_TexCoord)
+
+      return verticesTexCoords.length / 4
+    }
+
+    //初始化纹理
+    function initTextures(gl, n) {
+      //创建纹理对象
+      var texture = gl.createTexture()
+      //获取片元着色器uniform变量u_Sampler(纹理单元编号)的存储地址
+      var u_Sampler = gl.getUniformLocation(gl.program, 'u_Sampler')
+
+      var image = new Image()
+      image.src = "../assets/5.bmp" //设置纹理资源路径,正方形的贴成功了！
+
+      //注册加载事件的响应函数
+      image.onload = function () {
+        //调用加载纹理函数
+        loadTexTure(gl, n, texture, u_Sampler, image)
+      }
+
+      return true
+    }
+
+    //加载纹理
+    function loadTexTure(gl, n, texture, u_Sampler, image) {
+
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1) //对纹理图像镜像y轴反转     
+      gl.activeTexture(gl.TEXTURE0) //激活纹理单元  
+      gl.bindTexture(gl.TEXTURE_2D, texture) //绑定纹理对象
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR) //配置纹理对象参数
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image) //纹理图像分配给纹理对象
+      gl.uniform1i(u_Sampler, 0) //纹理单元编号传给片元着色器中uniform变量u_Sampler
+
+      //清空canvas
+      gl.clear(gl.COLOR_BUFFER_BIT);
+
+      //绘制纹理图像
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, n)
+    }
+    init()
+  </script>
+</body>
+
+</html>

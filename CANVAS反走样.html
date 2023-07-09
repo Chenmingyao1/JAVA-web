@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>Demo</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <script>
+        const canvas=document.querySelector("#canvas");
+        const ctx=canvas.getContext('2d');
+
+        canvas.width=window.innerWidth;
+        canvas.height=window.innerHeight;
+
+
+        ctx.lineWidth=10
+        ctx.strokeStyle='yellow'
+        ctx.beginPath();
+        ctx.moveTo(100,100);//好原始的方法，第一个点的是moveTo，后面都是lineTo！
+        ctx.lineTo(500,500);
+        //ctx.lineTo(700,400);
+        ctx.stroke();
+
+
+
+
+
+// 获取直线上的所有像素点
+const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+const pixels = imgData.data;
+
+// 遍历像素点，对每个像素点进行反走样处理
+for (let i = 0; i < pixels.length; i += 4) {
+  const x = (i / 4) % canvas.width;
+  const y = Math.floor((i / 4) / canvas.width);
+
+  if (pixels[i] === 0 && pixels[i + 1] === 0 && pixels[i + 2] === 0) {
+    // 如果当前像素点是黑色，就将其设置为半透明灰色
+    pixels[i] = 128;
+    pixels[i + 1] = 128;
+    pixels[i + 2] = 128;
+    pixels[i + 3] = 128;
+  }
+}
+
+// 将处理后的像素数据重新绘制到画布上
+ctx.putImageData(imgData, 0, 0);
+
+</script>
+</body>
+</html>

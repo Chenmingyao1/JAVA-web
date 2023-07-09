@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<title>扫描线填充</title>
+	<script src="https://cdn.staticfile.org/jquery/1.10.2/jquery.min.js"></script>
+</head>
+<body>
+	<h1>有效边表填充算法</h1>
+	<h2>请点击屏幕画点，系统会自动为您连线</h2>
+	<div>
+		<button id="beginFill" onclick="Fill()">开始填充</button>
+		<button id="goBackToPreStep" onclick="Clear()">清空画布</button>
+	</div>
+	<div>
+		<canvas id="myCanvas" style="background-color: rgb(220, 249, 148);"width="1000" height="800" style="border: 1px solid  #000000;"></canvas>
+	</div>
+	<script type="text/javascript">
+		//类的定义及函数实现在最下面
+		const canvas=document.getElementById('myCanvas');
+		var ctx=canvas.getContext("2d");//获取上下文
+		ctx.lineWidth=1;
+		
+		var isRight=true;
+		var ymin=10000;
+		var ymax=0;
+
+		var Points=new Array();//存储点
+		var Points_count=0;
+
+		var Lines=new Array();//把所有的边打个标号放入
+		var Lines_count=0;
+
+		var next=new Array();//Lines[next[i]]:即为下一条边
+		var head=-1;//活动边表的头
+
+
+		canvas.addEventListener("click",function(e){//定义点击事件
+			if(isRight==true){//在没有点击Fill之前可以绘点
+				var tempPoint=new Point();
+				tempPoint.x=e.offsetX;
+				tempPoint.y=e.offsetY;
+				if(tempPoint.y>ymax){
+					ymax=tempPoint.y;
+				}
+				if(tempPoint.y<ymin){
+					ymin=tempPoint.y;
+				}
+
+				Points[Points_count]=tempPoint;
+				if(Points_count>=1){//连边
+					ctx.strokeStyle="red";
+					ctx.beginPath();
+					ctx.moveTo(Points[Points_count-1].x,Points[Points_count-1].y);
+					ctx.lineTo(Points[Points_count].x,Points[Points_count].y);
+					ctx.closePath();
+					ctx.stroke();
+				}
+				Points_count++;
+			}
+
+		},false);
+		
+		/*-------绘制函数：点击button时候执行-------*/
+		function Fill(){
+			/*-----------Fill----------*/
+			//将最后一个点和第一个点相连,保证是个封闭的图形
+			isRight=false;
+			ctx.beginPath();
+			ctx.moveTo(Points[0].x,Points[0].y);
+			ctx.lineTo(Points[Points_count-1].x,Points[Points_count-1].y);
+			ctx.closePath();
+			ctx.stroke();
+			//定义一个新边表（NET）
+			var slNet=new Array(ymax-ymin+1);
+			for(var i=0;i<slNet.length;i++)
+				slNet[i]=[];//生成二维数组
+			//初始化新边表
+			InitNET();
+			//进行扫描线填充
+			ProcessScanLineFill();
+			/*-----------END----------*/
+			/*以下为Fill()中所需的函数*/
+			//初始化新边表
+			function InitNET(){
+				for(var i=0;i<Points_count;i++){
+					
+					var e=new tagEdge();
+					e.id=Lines_count++;
+					e.isIn=false;
+
+					var L_start=Points[i];//边的第一个顶点
+					var L_end=Points[(i+1)%Points_count];//边的第二个顶点
+					var L_start_pre=Points[(i - 1 + Points_count) % Points_count];//第一个顶点前面的点
+					var L_end_next=Points[(i +2 ) % Points_count];//第二个顶点后面的点
+					if(L_end.y!=L_start.y){//跳过水平线
+						e.dx=(L_end.x-L_start.x)/(L_end.y-L_start.y);//1/k
+						if(L_end.y>L_start.y){
+							e.xi=L_start.x;
+							if(L_end_next.y>=L_end.y){
+								e.ymax=L_end.y-1;
+							}else e.ymax=L_end.y;
+
+							slNet[L_start.y-ymin].push(e);
+						}else{
+							e.xi=L_end.x;
+							if(L_start_pre.y>=L_start.y){
+								e.ymax=L_start.y-1;
+							}else e.ymax=L_start.y;
+
+							slNet[L_end.y-ymin].push(e);
+						}
+						Lines.push(e);
+					}
+				}
+				var tp=new tagEdge();//javascript中不允许数组为空，因此这里填入一个空边
+				for(var i=0;i<slNet.length;i++){
+					slNet[i].push(tp);
+				}
+
+			}
+			function ProcessScanLineFill(){
+				//初始化活动边表的信息
+				head=-1;
+				for(var i=0;i<Lines.length;i++)
+					next[i]=-1;
+				/*----开始扫描线算法---*/
+				ctx.strokeStyle="blue";
+				ctx.beginPath();
+				for(var y=ymin;y<=ymax;y++){
+					insert(y-ymin);//插入新边
+					for(var i=head;i!=-1;i=next[next[i]]){//绘制该扫描线
+						if(next[i]!=-1){
+							ctx.moveTo(Lines[i].xi,y);
+				    		ctx.lineTo(Lines[next[i]].xi,y);
+				    	}
+					}
+					remove(y);//删除非活动边
+					update_AET();//更新活动边表中每项的xi值，并根据xi重新排序
+				}
+				ctx.closePath();
+			    ctx.stroke();
+			    /*----END扫描线算法---*/
+
+
+			     /*----扫描线算法所需的函数---*/
+			    //删除非活动边
+			    function remove(y){
+			    	var pre=head;
+			    	while(head!=-1&&Lines[head].ymax==y){
+			    		Lines[head].isIn=false;
+			    		head=next[head];
+			    		next[pre]=-1;
+			    		pre=head;
+			    	}
+			    	if(head==-1) return;
+			    	var nxt=next[head];
+			    	for(var i=nxt;i!=-1;i=nxt){
+			    		nxt=next[i];
+						if(Lines[i].ymax==y){
+							next[pre]=next[i];
+							Lines[i].isIn=false;
+							next[i]=-1;
+						}else pre=i;
+					}
+			    }
+
+			    //更新活动边表中每项的xi值，并根据xi重新排序
+			    function update_AET(){
+			    	for(var i=head;i!=-1;i=next[i]){
+						Lines[i].xi+=Lines[i].dx;
+					}
+					//按照冒泡排序的思想O(n)重新排序
+					if(head==-1) return;
+					if(next[head]==-1) return;
+					var pre=head;
+					if(Lines[head].xi>Lines[next[head]].xi){
+						head=next[head];
+						next[pre]=next[head];
+						next[head]=pre;
+						pre=head;
+					}
+					var j=next[head];
+					for(var i=j;i!=-1;i=j){
+						j=next[i];
+						if(j==-1) break;
+						if(Lines[i].xi>Lines[next[i]].xi){
+							next[pre]=next[i];
+							next[i]=next[next[i]];
+							next[j]=i;
+						}else pre=i;
+					}
+			    }
+
+			    //将扫描线对应的所有新边插入到AET中
+			    function insert(y){
+			    	for(var i=0;i<slNet[y].length;i++){
+						var temp=slNet[y][i];
+
+						if(temp.ymax==0&&temp.dx==0) break;
+						
+						if(head==-1){
+							head=temp.id;
+						}else{
+							if(temp.xi<Lines[head].xi){
+								next[temp.id]=head;
+								head=temp.id;
+							}else{
+								var pre=head;
+								for(var j=next[head];;j=next[j]){
+									if(j==-1||temp.xi<Lines[j].xi){
+										next[pre]=temp.id;
+										next[temp.id]=j;
+										break;
+									}
+									pre=j;
+								}
+							}
+						}
+						temp.isIn=true;
+					}
+			    }
+
+			} 
+
+		}
+		/*-------清空画布-------*/
+		function Clear(){
+			canvas.height=canvas.height//重新定义高度清空画布
+			ctx.lineWidth = 1;//线的宽度
+
+			isRight=true;
+			ymin=10000;
+			ymax=0;
+
+			Points.splice(0,Points.length);
+			Points_count=0;
+			Lines.splice(0,Lines.length);
+			Lines_count=0;
+		}
+		/*-----类的定义--------*/
+		function Point(){
+			this.x=0;
+			this.y=0;
+		}
+		function tagEdge(){
+			this.xi=0;
+			this.dx=0;//  1/k
+			this.ymax=0;
+			this.id=0;
+			this.isIn=false;
+		}
+
+	</script>
+
+</body>
+</html>

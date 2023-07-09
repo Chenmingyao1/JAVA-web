@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+<title>WebGL - 正向模板测试</title>
+
+
+    <canvas id='myCanvas' width="1024" height='768'></canvas>
+
+</head>
+<body>
+<script src="./twgl-full.min.js"></script>
+<canvas></canvas>
+</body>
+<script src="./webgl-utils.js"></script>
+<script src="./webgl-debug.js"></script>
+<script src="./cuon-utils.js"></script>
+<script src="./cuon-matrix.js"></script>
+<script id="2d-vertex-shader" type="x-shader/x-vertex">
+   attribute vec4 a_Position;
+   attribute vec2 a_TexCoord;
+   varying vec2 v_TexCoord;
+   void main() {
+     gl_Position = a_Position;
+     v_TexCoord = a_TexCoord;
+   }
+</script>
+
+<script id="2d-fragment-shader" type="x-shader/x-fragment">
+   #ifdef GL_ES
+   precision mediump float;
+   #endif
+   uniform sampler2D u_Sampler;
+   varying vec2 v_TexCoord;
+   void main() {
+     gl_FragColor = texture2D(u_Sampler, v_TexCoord);
+   }
+</script>
+<script>
+
+const m4 = twgl.m4;
+const gl = document.querySelector('canvas').getContext('webgl', {stencil: true});
+
+const vs = `
+attribute vec4 position;
+uniform mat4 matrix;
+void main() {
+  gl_Position = matrix * position;
+}
+`;
+
+const fs = `
+precision mediump float;
+uniform vec4 color;
+void main() {
+  gl_FragColor = color;
+}
+`;
+
+const program = twgl.createProgram(gl, [vs, fs]);
+const posLoc = gl.getAttribLocation(program, 'position');
+const matLoc = gl.getUniformLocation(program, 'matrix');
+const colorLoc = gl.getUniformLocation(program, 'color');
+
+const buf = gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+   -1, 1,
+   -1,  -1,
+   1, 1,
+  1,  -1,
+]), gl.STATIC_DRAW);
+
+gl.enableVertexAttribArray(posLoc);
+gl.vertexAttribPointer(
+    posLoc,    // attribute location
+    2,         // 2 value per vertex
+    gl.FLOAT,  // 32bit floating point values
+    false,     // don't normalize
+    0,         // stride (0 = base on type and size)
+    0,         // offset into buffer
+);
+
+// clear the stencil to 0 (the default)
+gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT | gl.STENCIL_BUFFER_BIT);
+gl.clearColor(0,0,0,1.0);
+
+gl.useProgram(program);
+
+// turn on the stencil
+gl.enable(gl.STENCIL_TEST);
+
+// Set the stencil test so it always passes
+// and the reference to 1
+gl.stencilFunc(
+   gl.ALWAYS,    // the test
+   1,            // reference value
+   0xFF,         // mask
+);
+// Set it so we replace with the reference value (1)
+gl.stencilOp(
+   gl.KEEP,     // what to do if the stencil test fails
+   gl.KEEP,     // what to do if the depth test fails
+   gl.REPLACE,  // what to do if both tests pass
+);
+
+// draw a white small triangle
+gl.uniform4fv(colorLoc, [1, 1, 1, 1]); // white
+gl.uniformMatrix4fv(matLoc, false, m4.scaling([0.2, 0.2, 1]));
+gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+
+// Set the test that the stencil must = 0
+//设置为1则开启模板测试，为0则是不开启原图整图直出！
+// gl.stencilFunc(gl.ALWAYS, 1, 0xFFFFFFFF);//为0的不显示，其他数字不为0的全部显示
+// gl.stencilOp(gl.REPLACE, gl.REPLACE, gl.REPLACE);
+gl.stencilFunc(
+   gl.EQUAL,     // the test
+   1,            // reference value
+   0xFFFFFFFF,         // mask
+);
+// don't change the stencil buffer on draw
+gl.stencilOp(
+   gl.KEEP,     // what to do if the stencil test fails
+   gl.KEEP,     // what to do if the depth test fails
+   gl.KEEP,  // what to do if both tests pass
+);
+// gl.stencilFunc(gl.NOTEQUAL, 0, 0xFFFFFFFF);//GL_NOTEQUAL 在片段深度值不等于缓冲区的深度值时通过测试
+// 	gl.stencilOp(gl.KEEP, gl.KEEP, gl.KEEP);
+
+drwaTexture();
+
+
+function drwaTexture(){
+
+   var canvas = document.querySelector('canvas');
+
+   // Get the rendering context for WebGL
+   var gl = getWebGLContext(canvas);
+   if (!gl) {
+   console.log('Failed to get the rendering context for WebGL');
+   return;
+   }
+
+   // Initialize shaders
+   if (!initShaders(gl, document.getElementById("2d-vertex-shader").text, document.getElementById("2d-fragment-shader").text)) {
+   console.log('Failed to intialize shaders.');
+   return;
+   }
+
+   // Set the vertex information
+   var n = initVertexBuffers(gl);
+   if (n < 0) {
+      console.log('Failed to set the vertex information');
+      return;
+   }
+
+   // Specify the color for clearing <canvas>
+   // gl.clearColor(0.0, 0.0, 0.0, 1.0);
+
+   // Set texture
+   if (!initTextures(gl, n)) {
+      console.log('Failed to intialize the texture.');
+      return;
+   }
+}
+
+function initVertexBuffers(gl) {
+  var verticesTexCoords = new Float32Array([
+    // Vertex coordinates, texture coordinate
+    -0.5,  0.5,   0.0, 1.0,
+    -0.5, -0.5,   0.0, 0.0,
+     0.5,  0.5,   1.0, 1.0,
+     0.5, -0.5,   1.0, 0.0,
+  ]);
+  var n = 4; // The number of vertices
+
+  // Create the buffer object
+  var vertexTexCoordBuffer = gl.createBuffer();
+  if (!vertexTexCoordBuffer) {
+    console.log('Failed to create the buffer object');
+    return -1;
+  }
+
+  // Bind the buffer object to target
+  gl.bindBuffer(gl.ARRAY_BUFFER, vertexTexCoordBuffer);
+  gl.bufferData(gl.ARRAY_BUFFER, verticesTexCoords, gl.STATIC_DRAW);
+
+  var FSIZE = verticesTexCoords.BYTES_PER_ELEMENT;
+  //Get the storage location of a_Position, assign and enable buffer
+  var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+  if (a_Position < 0) {
+    console.log('Failed to get the storage location of a_Position');
+    return -1;
+  }
+  gl.vertexAttribPointer(a_Position, 2, gl.FLOAT, false, FSIZE * 4, 0);
+  gl.enableVertexAttribArray(a_Position);  // Enable the assignment of the buffer object
+
+  // Get the storage location of a_TexCoord
+  var a_TexCoord = gl.getAttribLocation(gl.program, 'a_TexCoord');
+  if (a_TexCoord < 0) {
+    console.log('Failed to get the storage location of a_TexCoord');
+    return -1;
+  }
+  // Assign the buffer object to a_TexCoord variable
+  gl.vertexAttribPointer(a_TexCoord, 2, gl.FLOAT, false, FSIZE * 4, FSIZE * 2);
+  gl.enableVertexAttribArray(a_TexCoord);  // Enable the assignment of the buffer object
+
+  return n;
+}
+
+function initTextures(gl, n) {
+  var texture = gl.createTexture();   // Create a texture object
+  if (!texture) {
+    console.log('Failed to create the texture object');
+    return false;
+  }
+
+  // Get the storage location of u_Sampler
+  var u_Sampler = gl.getUniformLocation(gl.program, 'u_Sampler');
+  if (!u_Sampler) {
+    console.log('Failed to get the storage location of u_Sampler');
+    return false;
+  }
+  var image = new Image();  // Create the image object
+  if (!image) {
+    console.log('Failed to create the image object');
+    return false;
+  }
+  // Register the event handler to be called on loading an image
+  image.onload = function(){ loadTexture(gl, n, texture, u_Sampler, image); };
+  // Tell the browser to load an image
+//  image.src = '../assets/室内场景设计图1.jpg';
+image.src = '../assets/山水.png';
+
+  return true;
+}
+
+function loadTexture(gl, n, texture, u_Sampler, image) {
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // Flip the image's y axis
+  // Enable texture unit0
+  gl.activeTexture(gl.TEXTURE0);
+  // Bind the texture object to the target
+  gl.bindTexture(gl.TEXTURE_2D, texture);
+
+  // Set the texture parameters
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  // Set the texture image
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, image);
+  
+  // Set the texture unit 0 to the sampler
+  gl.uniform1i(u_Sampler, 0);
+  
+  gl.clear(gl.COLOR_BUFFER_BIT);   // Clear <canvas>
+
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, n); // Draw the rectangle
+}
+
+</script>
+

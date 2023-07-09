@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>计算机图形学算法教学辅助系统</title>
+<style>   
+.sidenav {
+  height: 100%;
+  width: 250px;
+  z-index: 1;
+  top:0;
+  left: 0;
+  background-color: #217082;
+  overflow-x: hidden;
+  padding-top: 60px;
+}
+.sidenav a{
+    padding: 6px 6px 6px 32px;
+  text-decoration: none;
+  font-size: 25px;
+  
+  color: #fffafa;
+  display: block;
+}
+
+.sidenav a:hover {
+  color: #e507b1;
+}
+
+
+li{list-style:none;}
+/*导航中每个子菜单的样式*/
+#globalNav ul li a{
+    
+    margin:auto 1px;
+    display:block;
+    width:150px;    
+    color:#fff;
+    text-decoration:underline;
+}
+#globalNav li ul li a{
+    background:#6DBBE1;
+    
+}
+#globalNav li ul li a:hover{
+    background:#BCF2F0;
+}
+</style>
+
+  <style>
+      
+      .div2{
+          width: 1100px;
+          height: 650px;
+          float: left;
+          margin-left: 330px;
+          position: fixed;
+          top:74px;
+      }
+
+
+      .div2 iframe{
+          width: 1100px;
+          height: 650px;
+          position: fixed;
+      }
+
+      a{
+          text-decoration: none;
+      }
+  </style>
+
+  <font size="6">
+      <style type="text/css">
+      .aacss{
+          font-weight: bold;
+      }
+      </style>
+      <p class="aacss" style = "color:rgb(244, 19, 102); margin-left:680px;position: fixed;margin-top: 0px;">计算机图形学教学辅助系统</p>
+  </font> 
+  <div style="position: fixed;top: 0;left:0;bottom: 0;right: 0;z-index: -1">
+      <canvas id="canvas" style="background-color: rgb(135, 205, 191);"></canvas>
+      <!-- <canvas id="canvas"></canvas> -->
+  </div>
+   
+  <script type="text/javascript">
+    const canvas = document.getElementById('canvas')
+    const ctx = canvas.getContext('2d')
+    let width = window.innerWidth
+    let height = window.innerHeight
+   
+    let dotsNum = 80 // 点的数量
+    let radius = 1 // 圆的半径，连接线宽度的一半
+    let fillStyle = 'rgba(255,255,255,0.5)' // 点的颜色
+    let lineWidth = radius * 2
+    let connection = 120 // 连线最大距离
+    let followLength = 80 // 鼠标跟随距离
+   
+    let dots = []
+    let animationFrame = null
+    let mouseX = null
+    let mouseY = null
+   
+    function addCanvasSize () { // 改变画布尺寸
+      width = window.innerWidth
+      height = window.innerHeight
+      canvas.width = width
+      canvas.height = height
+      ctx.clearRect(0, 0, width, height)
+      dots = []
+      if (animationFrame) window.cancelAnimationFrame(animationFrame)
+      initDots(dotsNum)
+      moveDots()
+    }
+   
+    function mouseMove (e) {
+      mouseX = e.clientX
+      mouseY = e.clientY
+    }
+   
+    function mouseOut (e) {
+      mouseX = null
+      mouseY = null
+    }
+   
+    function mouseClick () {
+      for (const dot of dots) dot.elastic()
+    }
+   
+    class Dot {
+      constructor(x, y) {
+        this.x = x
+        this.y = y
+        this.speedX = Math.random() * 2 - 1
+        this.speedY = Math.random() * 2 - 1
+        this.follow = false
+      }
+      draw () {
+        ctx.beginPath()
+        ctx.arc(this.x, this.y, radius, 0, 2 * Math.PI)
+        ctx.fill()
+        ctx.closePath()
+      }
+      move () {
+        if (this.x >= width || this.x <= 0) this.speedX = -this.speedX
+        if (this.y >= height || this.y <= 0) this.speedY = -this.speedY
+        this.x += this.speedX
+        this.y += this.speedY
+        if (this.speedX >= 1) this.speedX--
+        if (this.speedX <= -1) this.speedX++
+        if (this.speedY >= 1) this.speedY--
+        if (this.speedY <= -1) this.speedY++
+        this.correct()
+        this.connectMouse()
+        this.draw()
+      }
+      correct () { // 根据鼠标的位置修正
+        if (!mouseX || !mouseY) return
+        let lengthX = mouseX - this.x
+        let lengthY = mouseY - this.y
+        const distance = Math.sqrt(lengthX ** 2 + lengthY ** 2)
+        if (distance <= followLength) this.follow = true
+        else if (this.follow === true && distance > followLength && distance <= followLength + 8) {
+          let proportion = followLength / distance
+          lengthX *= proportion
+          lengthY *= proportion
+          this.x = mouseX - lengthX
+          this.y = mouseY - lengthY
+        } else this.follow = false
+      }
+      connectMouse () { // 点与鼠标连线
+        if (mouseX && mouseY) {
+          let lengthX = mouseX - this.x
+          let lengthY = mouseY - this.y
+          const distance = Math.sqrt(lengthX ** 2 + lengthY ** 2)
+          if (distance <= connection) {
+            opacity = (1 - distance / connection) * 0.5
+            ctx.strokeStyle = `rgba(255,255,255,${opacity})`
+            ctx.beginPath()
+            ctx.moveTo(this.x, this.y)
+            ctx.lineTo(mouseX, mouseY);
+            ctx.stroke();
+            ctx.closePath()
+          }
+        }
+      }
+      elastic () { // 鼠标点击后的弹射，线条会被弹开
+        let lengthX = mouseX - this.x
+        let lengthY = mouseY - this.y
+        const distance = Math.sqrt(lengthX ** 2 + lengthY ** 2)
+        if (distance >= connection) return
+        const rate = 1 - distance / connection // 距离越小此值约接近1
+        this.speedX = 40 * rate * -lengthX / distance
+        this.speedY = 40 * rate * -lengthY / distance
+      }
+    }
+   
+    function initDots (num) { // 初始化粒子
+      ctx.fillStyle = fillStyle
+      ctx.lineWidth = lineWidth
+      for (let i = 0; i < num; i++) {
+        const x = Math.floor(Math.random() * width)
+        const y = Math.floor(Math.random() * height)
+        const dot = new Dot(x, y)
+        dot.draw()
+        dots.push(dot)
+      }
+    }
+   
+    function moveDots () { // 移动并建立点与点之间的连接线
+      ctx.clearRect(0, 0, width, height)
+      for (const dot of dots) {
+        dot.move()
+      }
+      for (let i = 0; i < dots.length; i++) {
+        for (let j = i; j < dots.length; j++) {
+          const distance = Math.sqrt((dots[i].x - dots[j].x) ** 2 + (dots[i].y - dots[j].y) ** 2)
+          if (distance <= connection) {
+            opacity = (1 - distance / connection) * 0.5
+            ctx.strokeStyle = `rgba(255,255,255,${opacity})`
+            ctx.beginPath()
+            ctx.moveTo(dots[i].x, dots[i].y)
+            ctx.lineTo(dots[j].x, dots[j].y);
+            ctx.stroke();
+            ctx.closePath()
+          }
+        }
+      }
+      animationFrame = window.requestAnimationFrame(moveDots)
+    }
+   
+    addCanvasSize()
+   
+    initDots(dotsNum)
+    moveDots()
+   
+    document.onmousemove = mouseMove
+    document.onmouseout = mouseOut
+    document.onclick = mouseClick
+    window.onresize = addCanvasSize
+    //分割线
+    function initTree(t) {
+    var tree=document.getElementById(t);//生成树
+    tree.style.display="none";//设置样式为隐藏形式，不显示
+    var lis=tree.getElementsByTagName("li");
+    for(var i=0;i<lis.length;i++) {  //取出主要的导航栏
+        lis[i].id="li"+i;
+        var uls=lis[i].getElementsByTagName("ul"); //子导航栏
+        if(uls.length!=0) {
+            uls[0].id="ul"+i;
+            uls[0].style.display="none";
+            var as=lis[i].getElementsByTagName("a"); //子导航栏的内容
+            as[0].id="a"+i;
+            as[0].className="folder";
+            as[0].href="#this";
+            as[0].tget=uls[0];
+            as[0].onclick=function() {
+                openTag(this,this.tget);
+            }
+        }
+    }
+    tree.style.display="block";
+}
+function openTag(a,t) {
+    if(t.style.display=="block") { //点击一些展开，再点击一下折叠
+        t.style.display="none";
+        a.className="folder";
+    } else {
+        t.style.display="block";
+        a.className="";
+    }
+}
+window.onload=function() {
+    initTree("globalNav");
+}
+
+  </script> 
+</head>
+
+<body>
+        <ul id="globalNav">
+          <li class="sidenav"><a href="#">教学模块</a>
+            <ul>
+                <a href="./教学模块1.html"target="test">前言</a>
+                <a href="./教学模块2.html"target="test">WebGL渲染流程</a>
+                <a href="./绘制图元的表格.html"target="test">WebGL的基础绘制图元</a>
+                <a href="./教学模块3.html"target="test">GLSL着色器语言</a>
+            </ul>
+          </li>
+            <li class="sidenav"><a href="#">基础图形绘制</a>
+                <ul>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E7%82%B9.html"target="test">绘制一个点</a>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E5%A4%9A%E4%B8%AA%E7%82%B9.html"target="test">绘制多个点</a>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E7%BA%BF.html"target="test">绘制线</a>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E4%B8%80%E5%AE%9A%E5%AE%BD%E5%BA%A6%E7%9A%84%E7%BA%BF.html"target="test">绘制宽度线</a>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E8%BF%9E%E7%BB%AD%E7%9B%B4%E7%BA%BF%E6%AE%B5.html"target="test">绘制连续任意方向线</a>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E4%B8%89%E8%A7%92%E5%BD%A2.html"target="test">绘制三角形</a>
+                  <a href="http://127.0.0.1:5500/%E7%BB%98%E5%88%B6%E6%AD%A3%E6%96%B9%E5%BD%A2.html"target="test">绘制正方形</a>
+                  <a href="./绘制圆.html"target="test">绘制圆</a>
+                  <a href="./绘制椭圆.html"target="test">绘制椭圆</a>
+                  <a href="http://127.0.0.1:5500/%E5%8A%A0%E7%82%B9%E7%BA%B9%E7%90%86%E7%9A%84%E6%AD%A3%E6%96%B9%E4%BD%93.html"target="test">绘制正方体</a>
+                  <a href="./绘制四棱锥和正方体.html"target="test">同时绘制四棱锥和正方体</a>
+                </ul>
+              </li>
+              <li class="sidenav"><a href="#">计算机图形学算法</a>
+                <ul>
+                  <a href="./多边形有效填充算法.html"target="test">多边形有效边表扫描填充算法</a>
+                  <a href="http://127.0.0.1:5500/playground.html" target="test">Beizer曲线</a>
+                  <a href="./贝塞尔曲面/page.html" target="test">Beizer曲面</a>
+                  <a href="http://127.0.0.1:5500/%E7%9B%B4%E7%BA%BF%E6%AE%B5%E8%A3%81%E5%89%AA.html"target="test">Cohen-Sutherland直线段裁剪算法</a>
+                  <a href="./多边形裁剪算法.html"target="test">多边形裁剪算法-单边裁剪</a>
+                  <a href="http://127.0.0.1:5500/%E9%9A%90%E9%9D%A2%E7%AE%97%E6%B3%95.html"target="test">隐面算法之画家算法</a>
+                  <a href="./新的z-buffer.html"target="test">隐面算法之z-buffer算法</a>
+                  <a href="http://127.0.0.1:5500/2D%E6%AD%A3%E6%96%B9%E5%BD%A2%E8%B4%B4%E5%9B%BE.html"target="test">纹理映射-2D图形</a>
+                  <a href="./完全贴纹理的正方体.html"target="test">纹理映射-正方体贴相同纹理</a>
+                  <a href="./多重纹理drawarrays.html"target="test">多重纹理-风景加雾</a>
+                  <a href="./正方体每面贴不同的纹理.html"target="test">纹理映射、光源</a>
+                  <a href="./逐片元光源.html"target="test" >光照-逐片元光源</a>
+                  <a href="./光照-环境光.html"target="test" >光照-环境光</a>
+                  <a href="./光源-平行光.html"target="test" >光照-平行光</a>
+                  <a href="./Phong光照模型.html"target="test">Phong光照模型</a>
+
+
+                </ul>
+              </li>
+              <li class="sidenav"><a href="#">三维图形几何变换</a>
+                <ul>
+                    <a href="./矩形平移.html"target="test">矩形平移</a>
+                    <a href="http://127.0.0.1:5500/%E7%AE%80%E6%98%93%E6%97%8B%E8%BD%AC%E5%AE%9E%E4%BE%8B.html"target="test">三角形绕点旋转</a>
+                    <a href="http://127.0.0.1:5500/%E7%9F%A9%E5%BD%A2%E6%9D%A1%E6%97%8B%E8%BD%AC.html"target="test">矩形绕点旋转</a>
+                    <a href="http://127.0.0.1:5500/%E5%8A%A8%E7%94%BB-%E6%97%B6%E9%92%9F.html"target="test">模拟旋转时钟</a>
+                    <a href="./双色三角形.html"target="test">双色三角形</a>
+                    <a href="http://127.0.0.1:5500/%E6%8F%92%E5%80%BC%E8%BF%90%E7%AE%97%E7%9A%84%E9%A2%9C%E8%89%B2%E5%A1%AB%E5%85%85.html"target="test">插值运算颜色填充三角形</a>
+                    <a href="./键盘监听交互（旋转两个长方体）.html"target="test">键盘监听交互</a>
+                    <a href="./放大缩小贴好纹理的正方体.html"target="test">手动调整视角</a>
+                    <a href="./键盘动态改变视点.html"target="test" >改变三维图形的视角</a>
+    
+    
+                </ul>
+              </li>
+              <li class="sidenav"><a href="#">学习衍生</a>
+                <ul>
+                    <a href="./融合的例子.html"target="test">深度测试与α融合</a>
+                    <a href="./assets/正向模板测试.png"target="test">正向模板测试</a>
+                    <a href="./assets/反向模板测试.png"target="test">反向模板测试</a>
+                    <a href="./圆环体.html"target="test">Phong着色绘制圆环体</a>
+                    <a href="./光照模型.html"target="test">带光照的桌子板凳</a>
+                    <a href="./室内场景漫游.html"target="test">室内场景漫游</a>
+                </ul>
+              </li>
+        </ul>
+   
+    
+  <div class="div2">
+      <iframe name="test"></iframe>
+  </div>
+
+</body>
+</html>

@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>data 数据对象</title>
+</head>
+<body>
+   
+    <div id="app">
+        {{message}}
+        <h2>{{school.name}} {{school.mobile}}</h2>
+        <h2>{{school.mobile}}</h2>
+        <ul>
+            <li>{{campus[0]}}</li>
+            <li>{{campus[3]}}</li>
+        </ul>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+<script>
+    var app=new Vue({
+        el:"#app",
+       //el:".app",
+       //el:"div",
+        data:{
+            message:"你好！陈明瑶！！！"//靠message的值来改变，#是ID选择器，保持一致即可
+            ,school:{
+                name:"小陈",
+                mobile:"123-455-0456"
+            },
+            campus:["北京校区","上海校区","广州校区","深圳校区"]
+        }
+    })
+</script>
+</body>
+</html>

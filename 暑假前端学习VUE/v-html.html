@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>v-html</title>
+    </head>
+    <body>
+        <div id="app">
+            {{content}}
+            <p v-html="content"></p>
+            <p v-text="content"></p>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <script>
+            var app=new Vue({
+                el:"#app",
+                data:{
+                    //content:"小陈"
+                    content:"<a href='http://www.itheima.com'>黑马程序员</a>"
+                }
+            })
+        </script>
+    </body>
+</html>

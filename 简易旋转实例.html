@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>简易旋转实例</title>
+</head>
+<body>
+    <canvas id="canvas"></canvas>
+    <div id="uiContainer">
+      <div id="ui">
+        <div id="angle"></div>
+      </div>
+    </div>
+    <script src="./glMatrix-0.9.6.js"></script>
+    <script>
+        //js代码，编码方式要保持一致！
+        var webgl;
+        var angle=0;
+        var projMat4;
+        var projMat4=mat4.create();
+        var vertexString = `
+        attribute vec4 a_position;//vec3和vec4都可以
+        uniform mat4 proj;
+        uniform float angle;
+        uniform mat3 u_matrix;
+        void main()
+        {
+            gl_Position=vec4(a_position.x*cos(angle)-a_position.y*sin(angle),a_position.x*sin(angle)+a_position.y*cos(angle),0,1.0);
+            
+        }`;
+        var fragmentString=`
+        void main(){
+            gl_FragColor=vec4(0.0,0.98,0.6,1.0);
+        }
+        `;//片元的颜色，就是绘制出来的图形的颜色
+</script>
+
+
+<script src="https://webglfundamentals.org/webgl/resources/webgl-utils.js"></script>
+<script src="https://webglfundamentals.org/webgl/resources/webgl-lessons-ui.js"></script>
+<script src="https://webglfundamentals.org/webgl/resources/m3.js"></script>
+
+
+<script>
+      "use strict";
+
+function init(){//每次先写这个,然后开始编写buffer和draw
+            initWebGL();
+            initShader();
+            initBuffer();
+            draw();
+        }//入口函数
+        function initWebGL(){
+            let webglDiv=document.getElementById("webglCanvas");//就是咱在下面body里面定义的canvas的名字，保持一致！
+            webgl=webglDiv.getContext("webgl");
+            webgl.viewport(0,0,webglDiv.clientWidth,webglDiv.clientHeight);
+            mat4.ortho(0,webglDiv.clientWidth,webglDiv.clientHeight,0,-1,1,projMat4);//坐标系
+        }//初始化函数
+        function initShader(){//关联起来
+            let vsshader=webgl.createShader(webgl.VERTEX_SHADER);
+            let fsshader=webgl.createShader(webgl.FRAGMENT_SHADER);
+
+            webgl.shaderSource(vsshader,vertexString);
+            webgl.shaderSource(fsshader,fragmentString);//相当于绑定好先前设置的条件啊
+            
+            webgl.compileShader(vsshader);
+            webgl.compileShader(fsshader);
+
+            let program=webgl.createProgram();//先写create再把接下来的首字母大写
+            webgl.attachShader(program,vsshader);
+            webgl.attachShader(program,fsshader);
+
+            webgl.linkProgram(program);
+            webgl.useProgram(program);
+
+            webgl.program=program;
+        }//shader初始化函数
+       // var angleInRadians=0;
+        function updateAngle(event,ui)
+        {
+             angle = ui.value;
+            // var angleInDegrees = 360 - ui.value;
+            // angleInRadians = angleInDegrees * Math.PI / 180;
+            initBuffer();
+            draw();
+        }
+        webglLessonsUI.setupSlider("#angle", {slide: updateAngle, max: 360});
+        function initBuffer(){
+            let arr=[
+                0.1,0.4,0,
+                0.1,0.5,0,
+                0.2,0.4,0
+            ];//xyz
+            let pointPosition=new Float32Array(arr);
+            let lineBuffer=webgl.createBuffer();
+            webgl.bindBuffer(webgl.ARRAY_BUFFER,lineBuffer);
+            webgl.bufferData(webgl.ARRAY_BUFFER,pointPosition,webgl.STATIC_DRAW);
+
+            let aPosition=webgl.getAttribLocation(webgl.program,"a_position");
+            //多半都是false
+            webgl.vertexAttribPointer(aPosition,3,webgl.FLOAT,false,0,0);//最后一个是数组元素偏移量
+            webgl.enableVertexAttribArray(aPosition);
+
+            // var matrixLocation = gl.getUniformLocation(program, "u_matrix");
+            // var matrix = m3.projection(webgl.canvas.clientWidth, webgl.canvas.clientHeight);
+            // matrix = m3.rotate(matrix, angleInRadians);
+            // webgl.uniformMatrix3fv(matrixLocation, false, matrix);
+
+            let uangle=webgl.getUniformLocation(webgl.program,"angle");
+            let angle1= angle*Math.PI/180;//改变方向
+            webgl.uniform1f(uangle,angle1);
+           // webgl.uniform1f(uangle,)
+            
+            let uniforproj=webgl.getUniformLocation(webgl.program,"proj");
+            webgl.uniformMatrix4fv(uniforproj,false,projMat4);
+        }//数据缓冲区初始化函数
+        /*
+        initBuffer()和draw()变化大！其他基本无改动
+        */
+        
+        //默认从0开始，所以这里进度条是0到360这个度数的调整！
+       
+       //TRIANGLES就是直接3个顶点相连
+        function draw()
+        {
+            webgl.clearColor(0.0,0.0,0.0,1.0);//黑色000
+            webgl.clear(webgl.COLOR_BUFFER_BIT|webgl.DEPTH_BUFFER_BIT);
+            //webgl.drawArrays(webgl.LINES,0,4);//LINES只能成对的出现,且每两个一组一对
+            //webgl.drawArrays(webgl.LINE_STRIP,0,4);//每个相邻顶点都相连
+            //webgl.drawArrays(webgl.LINE_LOOP,0,3);//加个首尾相连
+            //webgl.drawArrays(webgl.TRIANGLE_FAN,0,4);//单词一定要拼对！TRIANGLE_FAN就是4个点相连
+            //TRIANGLES只选取前3个点
+            webgl.drawArrays(webgl.TRIANGLES,0,3);//不管后面写的几都是选取前两个点
+            
+        }//绘制点
+</script>
+        
+    
+</head>
+<body onload="init()">
+    <canvas id="webglCanvas" width="1500" height="768"></canvas>
+</body>
+</html>

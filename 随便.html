@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title></title>
+</head>
+<style type="text/css">
+	/*一些基本的css*/
+	.title{
+		display: block;
+		line-height: 200px;
+		font-size: 20px;
+		font-family: "宋体";
+	}
+	/*为了能够设置两个标签叠加在一起，需要设置其父标签*/
+	.father{
+		/*标签位置设置为相对的*/
+		position: relative;
+		text-align: center;
+		width: 800px;
+	}
+	/*canvas的大小需要在起标签内设置，否则会拉伸或缩小默认的大小*/
+	.canvas{
+		border:1px solid black;
+		/*位置绝对*/
+		position: absolute;
+		top: 0;
+		left: 110;
+		/*设置所在层数，在上层*/
+		z-index: 1;
+	}
+	/*需要将img背景图的尺寸和canvas的尺寸设置相同*/
+	.canvas_bgp{
+		width: 650px;
+		height: 414px;
+		/*位置绝对*/
+		position: absolute;
+		top: 0;
+		left: 110;
+	}
+</style>
+<body>
+	<!-- <div align="center" class="title">
+		使用css设置canvas背景图
+	</div> -->
+	<!-- 一个存放canvas和img的盒子 -->
+	<div align="center" class="father">
+		<canvas class="canvas" width="650px" height="414px" id="canvas"></canvas>
+		<img src="./assets/R-C.png" class="canvas_bgp">
+	</div>
+	<script type="text/javascript">
+		//一个使用canvas简单的画图 
+		//注意：需要写在canvas标签后
+		var my_canvas=document.getElementById("canvas");
+		var ctx=my_canvas.getContext("2d");
+		// 画图
+		
+	</script>
+</body>
+</html>

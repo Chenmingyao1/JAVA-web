@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绘制线</title>
+    <script src="./glMatrix-0.9.6.js"></script>
+    <script>
+        //js代码，编码方式要保持一致！
+        var webgl;
+        var projMat4;
+        var projMat4=mat4.create();
+       
+        var vertexString = `attribute vec4 a_position;
+        uniform mat4 proj;
+        void main()
+        {
+            gl_Position=proj*a_position;
+            //gl_PointSize=60.0;(因为绘制线与这个无关了！)
+           
+        }`;
+        var fragmentString=`
+        void main(){
+            gl_FragColor=vec4(0,1.0,1.0,1.0);
+        }
+        `;
+        function init(){
+            initWebGL();
+            initShader();
+            initBuffer();
+            draw();
+        }//入口函数
+        function initWebGL(){
+            let webglDiv=document.getElementById("webglCanvas");
+            webgl=webglDiv.getContext("webgl");
+            webgl.viewport(0,0,webglDiv.clientWidth,webglDiv.clientHeight);
+            mat4.ortho(0,webglDiv.clientWidth,webglDiv.clientHeight,0,-1,1,projMat4);//坐标系
+        }//初始化函数
+        function initShader(){
+            let vsshader=webgl.createShader(webgl.VERTEX_SHADER);
+            let fsshader=webgl.createShader(webgl.FRAGMENT_SHADER);
+
+            webgl.shaderSource(vsshader,vertexString);
+            webgl.shaderSource(fsshader,fragmentString);
+            
+            webgl.compileShader(vsshader);
+            webgl.compileShader(fsshader);
+
+            let program=webgl.createProgram();
+            webgl.attachShader(program,vsshader);
+            webgl.attachShader(program,fsshader);
+
+            webgl.linkProgram(program);
+            webgl.useProgram(program);
+
+            webgl.program=program;
+        }//shader初始化函数
+        function initBuffer(){
+            let aPosition=webgl.getAttribLocation(webgl.program,"a_position");
+            let arr=[
+                100.0,100.0,0,1.0,
+                200.0,200.0,0,1.0,
+                300.0,200.0,0,1.0,
+                400.0,600.0,0,1.0
+            ];//xyz和透明度
+            let pointPosition=new Float32Array(arr);//可以这样赋给它，也可以直接在这里面写数组
+            let lineBuffer=webgl.createBuffer();
+            webgl.bindBuffer(webgl.ARRAY_BUFFER,lineBuffer);
+            webgl.bufferData(webgl.ARRAY_BUFFER,pointPosition,webgl.STATIC_DRAW);
+            webgl.enableVertexAttribArray(aPosition);
+            webgl.vertexAttribPointer(aPosition,4,webgl.FLOAT,false,4*4,0*4);//最后一个是数组元素偏移量
+            
+            let uniforproj=webgl.getUniformLocation(webgl.program,"proj");
+            webgl.uniformMatrix4fv(uniforproj,false,projMat4);
+        }//数据缓冲区初始化函数
+        /*
+        initBuffer()和draw()变化大！其他基本无改动
+        */
+        function draw()
+        {
+            webgl.clearColor(0.0,0.0,0.0,1.0);//黑色000
+            webgl.clear(webgl.COLOR_BUFFER_BIT|webgl.DEPTH_BUFFER_BIT);
+            //webgl.drawArrays(webgl.LINES,0,4);//LINES只能成对的出现,且每两个一组一对
+            webgl.drawArrays(webgl.LINES,0,4);//每个相邻顶点都相连
+            //LINES是两个一组一个线段
+            //LINE_STRIP是线条，LINE_LOOP是首尾相连的线段
+           // webgl.drawArrays(webgl.LINE_LOOP,0,4);//加个首尾相连
+        }//绘制点
+    </script>
+</head>
+<body onload="init()">
+    <canvas id="webglCanvas" width="800" height="800"></canvas>
+</body>
+</html>

@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>矩形条旋转</title>
+    <script src="./glMatrix-0.9.6.js"></script>
+    <script>
+        let vertexstring = `
+        attribute vec4 a_position;
+       
+       
+        uniform mat4 u_formMatrix;
+        void main(void){
+            gl_Position =u_formMatrix * a_position;
+            
+        }
+        `;
+        let fragmentstring = `
+        precision mediump float;
+
+          uniform vec4 u_color;
+        void main(void){
+          gl_FragColor =u_color;
+        }
+        `;
+
+        var webgl;
+        var uniformTexture = 0;
+        var uniformTexture1 = 0;
+        var uniformAnim = 0;
+        var count = 0;
+        var texture0;
+        var texture1;
+        function webglStart() {
+            init();
+            tick();
+        }
+        function tick() {
+            requestAnimFrame(tick)
+            init();
+        };
+        function init() {
+            initWebgl();
+            initShader();
+            initBuffer();
+            draw();
+        }
+        function initWebgl() {
+            let webglDiv = document.getElementById('myCanvas');
+            webgl = webglDiv.getContext("webgl");
+            webgl.viewport(0, 0, webglDiv.clientWidth, webglDiv.clientHeight);
+           
+        }
+        function initShader() {
+
+            let vsshader = webgl.createShader(webgl.VERTEX_SHADER);
+            let fsshader = webgl.createShader(webgl.FRAGMENT_SHADER);
+
+            webgl.shaderSource(vsshader, vertexstring);
+            webgl.shaderSource(fsshader, fragmentstring);
+
+            webgl.compileShader(vsshader);
+            webgl.compileShader(fsshader);
+            if (!webgl.getShaderParameter(vsshader, webgl.COMPILE_STATUS)) {
+                var err = webgl.getShaderInfoLog(vsshader);
+                alert(err);
+                return;
+            }
+            if (!webgl.getShaderParameter(fsshader, webgl.COMPILE_STATUS)) {
+                var err = webgl.getShaderInfoLog(fsshader);
+                alert(err);
+                return;
+            }
+            let program = webgl.createProgram();
+            webgl.attachShader(program, vsshader);
+            webgl.attachShader(program, fsshader)
+
+            webgl.linkProgram(program);
+            webgl.useProgram(program);
+
+            webgl.program = program
+        }
+        function initBuffer() {
+            let modelView = mat4.create();
+            mat4.identity(modelView);
+            mat4.scale(modelView, [2, 2, 1]);
+            let angle = 2*Math.PI /6 * count;//逆时针旋转
+            //console.log(angle);
+            mat4.rotate(modelView,angle,[0,0,1])
+            let arr = [
+                0, 0, 0, 1,
+                0, 0.05, 0, 1,
+                0.5, 0, 0, 1,
+
+                0.5, 0, 0, 1,
+                0, 0.05, 0, 1,
+                0.5, 0.05, 0, 1,
+            ]
+            let pointPosition = new Float32Array(arr);
+            let aPsotion = webgl.getAttribLocation(webgl.program, "a_position");
+            var colorLocation = webgl.getUniformLocation(webgl.program, "u_color");
+    
+            // var r=Math.random();
+            // var g=Math.random();
+            // var b=Math.random();
+            var color = [0.5, 0, 0, 1];//直接定个棕色算了
+            //var color = [r, g, b, 1];
+           // var color = [Math.random(), Math.random(), Math.random(), 1];
+            webgl.uniform4fv(colorLocation, color);//这句有问题！
+
+            let triangleBuffer = webgl.createBuffer();
+            webgl.bindBuffer(webgl.ARRAY_BUFFER, triangleBuffer);
+            webgl.bufferData(webgl.ARRAY_BUFFER, pointPosition, webgl.STATIC_DRAW);
+            webgl.vertexAttribPointer(aPsotion, 4, webgl.FLOAT, false, 0, 0);
+            webgl.enableVertexAttribArray(aPsotion);
+           
+            let uniformMatrix = webgl.getUniformLocation(webgl.program, "u_formMatrix");
+            webgl.uniformMatrix4fv(uniformMatrix,false,modelView)
+
+
+        }
+//         function setColors(webgl) {
+//   // Pick 2 random colors.
+//   var r1 = Math.random();
+//   var b1 = Math.random();
+//   var g1 = Math.random();
+
+// //   var r2 = Math.random();
+// //   var b2 = Math.random();
+// //   var g2 = Math.random();
+
+//   webgl.bufferData(
+//       webgl.ARRAY_BUFFER,
+//       new Float32Array(
+//         [ r1, b1, g1, 1,
+//           r1, b1, g1, 1,
+//           r1, b1, g1, 1,
+//           r1, b1, g1, 1,
+//           r1, b1, g1, 1,
+//           r1, b1, g1, 1
+//         ]),
+//       webgl.STATIC_DRAW);
+// }
+        function draw() {
+            webgl.clearColor(0.2, 0.5, 0.2, 0.5);//画布背景颜色
+            webgl.clear(webgl.COLOR_BUFFER_BIT | webgl.DEPTH_BUFFER_BIT);
+            webgl.enable(webgl.DEPTH_TEST);
+
+
+
+            //纹理变动
+            uniformAnim = webgl.getUniformLocation(webgl.program, "anim");//动画
+            count = count +0.05;
+            webgl.uniform1f(uniformAnim, count);
+            
+     
+
+            webgl.drawArrays(webgl.TRIANGLES, 0, 6);//2个三角形绘制矩形
+        }
+        window.requestAnimFrame = (function () {
+            return window.requestAnimationFrame ||
+                window.webkitRequestAnimationFrame ||
+                window.mozRequestAnimationFrame ||
+                window.oRequestAnimationFrame ||
+                window.msRequestAnimationFrame ||
+                function (callback, element) {
+                    window.setTimeout(callback, 1000 / 60);//旋转的时间
+                };
+        })();
+    </script>
+</head>
+
+<body onload="webglStart()">
+    <canvas id='myCanvas' width="1024" height='768'></canvas>
+</body>
+
+</html>

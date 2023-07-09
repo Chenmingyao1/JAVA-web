@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>图片切换，到顶以后箭头隐藏出现</title>
+    </head>
+    <body>
+        <div id="app">
+            <img :src="imgArr[index]"alt=""/>
+
+            <a href="javascript:void(0)"@click="prev"v-show="this.index>=1"class="left">
+            <img src="左箭头 .png"alt=""/>
+            </a>
+
+            <a href="javascript:void(0)"@click="next"v-show="this.index<=9"class="right">
+                <img src="右箭头 .png"alt=""/>
+            </a>
+           
+            </div>
+        </div>
+       
+       
+    <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+    <script>
+        var app= new Vue({
+            el:"#app",
+            data:{
+                imgArr:[
+                    "./image/00.jpg",
+                    "./image/01.jpg",
+                    "./image/02.jpg",
+                    "./image/03.jpg",
+                    "./image/04.jpg",
+                    "./image/05.jpg",
+                    "./image/06.jpg",
+                    "./image/07.jpg",
+                    "./image/08.jpg",
+                    "./image/09.jpg",
+                    "./image/10.jpg",
+                ],
+                index:0
+            },
+            methods:{
+                prev:function(){
+                   
+                 this.index--;
+                },
+                next:function(){
+                    //共5张照片
+                    this.index++;
+                }
+
+            }
+        })
+    </script>
+    </body>
+</html>

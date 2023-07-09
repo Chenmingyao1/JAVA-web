@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>v-bind指令</title>
+        <style>
+            .active{
+                border:1px solid red;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="app">
+            <img v-bind:src="imgSrc"alt="">
+            <br>
+            <img :src="imgSrc"alt="":title="imgTitle+'!!!'"
+            :class="isActive?'active':''"@click="changeActive">
+            <br>
+            <img :src="imgSrc"alt="":title="imgTitle+'!!!'"
+            :class="{active:isActive}"@click="changeActive">
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <script>
+            //以下var一个app就是创建一个Vue实例！
+           var app=new Vue({
+            el:"#app",
+            data:{
+               imgSrc:"http://www.itheima.com/images/logo.png",
+               imgTitle:"黑马",//把鼠标放在图标上会显示黑马两个字，就是图片的详细信息
+               isActive:false
+            
+            },
+            methods:{
+                changeActive:function(){
+                    this.isActive=!this.isActive;
+                }
+            }
+            })
+            //为元素绑定事件
+        </script>
+    </body>
+</html>

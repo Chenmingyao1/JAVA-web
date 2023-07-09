@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>v-for指令</title>
+    </head>
+    <body>
+        <div id="app">
+            
+           <ul>
+            <li>
+           </ul>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/vue/dist/vue.js"></script>
+        <script>
+            var app=new Vue({
+                el:"#app",
+                data:{
+                  arr:[1,2,3,4,5],
+                  objArr:[
+                    {name:"陈明瑶"},
+                    {name:"王子奇"}
+                ]
+
+                }
+               
+            })
+            //为元素绑定事件
+        </script>
+    </body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>绘制图元的表格</title>
+</head>
+<body style="background-color:rgb(239, 239, 149)">
+    <font size="6">
+        <h4 align="center">WebGL绘制图元</h4>
+        <table border="5">
+          <tr>
+            <td>点</td>
+            <td>gl.POINTS</td>
+            <td>每个顶点被显示的大小至少是一个像素</td>
+          </tr>
+          <tr>
+            <td>线段</td>
+            <td>gl.LINES</td>
+            <td>每两个顶点坐标一对相连成线段</td>
+          </tr>
+          <tr>
+            <td>线段</td>
+            <td>gl.LINE_STRIP</td>
+            <td>从首到尾的顶点坐标，依次相连绘制</td>
+          </tr>
+          <tr>
+            <td>闭合线段</td>
+            <td>gl.LINE_LOOP</td>
+            <td>从首到尾依次相连，且首尾顶点坐标也连接起来</td>
+          </tr>
+          <tr>
+            <td>三角形</td>
+            <td>gl.TRIANGLES</td>
+            <td>相继3个顶点组合在一起成为一个三角形，若不足3的倍数则最后一个三角形不会绘制</td>
+          </tr>
+          <tr>
+            <td>三角形条带</td>
+            <td>gl.TRIANGLE_STRIP</td>
+            <td>每个顶点和前两个顶点组合起来定义成一个新的三角形</td>
+          </tr>
+          <tr>
+            <td>三角形扇</td>
+            <td>gl.TRIANGLE_FAN</td>
+            <td>第一个顶点坐标是固定的公共顶点，这个顶点和接下来的两个顶点确定一个新三角形，从第四个顶点开始，每一个顶点都和它上一个顶点以及第一个顶点组成一个新三角形</td>
+          </tr>
+
+        </table>
+    </font>
+   
+   
+</body>
+
+</html> 

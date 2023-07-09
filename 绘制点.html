@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绘制点坐标</title>
+    <script src="./glMatrix-0.9.6.js"></script>
+    <script>
+        //js代码，编码方式要保持一致！
+        var webgl;
+        var projMat4;
+        var projMat4=mat4.create();
+        var vertexString = `attribute vec4 a_position;
+        uniform mat4 proj;
+        void main()
+        {
+            gl_Position=proj*a_position;
+            gl_PointSize=60.0;
+        }`;
+        var fragmentString=`
+        void main(){
+            gl_FragColor=vec4(0,1.0,1.0,1.0);
+        }
+        `;
+        function init(){
+            initWebGL();
+            initShader();
+            initBuffer();
+            draw();
+        }//入口函数
+        function initWebGL(){
+            let webglDiv=document.getElementById("webglCanvas");
+            webgl=webglDiv.getContext("webgl");
+            webgl.viewport(0,0,webglDiv.clientWidth,webglDiv.clientHeight);
+            mat4.ortho(0,webglDiv.clientWidth,webglDiv.clientHeight,0,-1,1,projMat4);//坐标系
+        }//初始化函数
+        function initShader(){
+            let vsshader=webgl.createShader(webgl.VERTEX_SHADER);
+            let fsshader=webgl.createShader(webgl.FRAGMENT_SHADER);
+
+            webgl.shaderSource(vsshader,vertexString);
+            webgl.shaderSource(fsshader,fragmentString);
+            
+            webgl.compileShader(vsshader);
+            webgl.compileShader(fsshader);
+
+            let program=webgl.createProgram();
+            webgl.attachShader(program,vsshader);
+            webgl.attachShader(program,fsshader);
+
+            webgl.linkProgram(program);
+            webgl.useProgram(program);
+
+            webgl.program=program;
+        }//shader初始化函数
+        function initBuffer(){
+            let pointPosition=new Float32Array([200.0,200.0,0.0,1.0]);
+            let aPosition=webgl.getAttribLocation(webgl.program,"a_position");
+            webgl.vertexAttrib4fv(aPosition,pointPosition);
+
+            let uniforproj=webgl.getUniformLocation(webgl.program,"proj");
+            webgl.uniformMatrix4fv(uniforproj,false,projMat4);
+        }//数据缓冲区初始化函数
+        /*
+        initBuffer()和draw()变化大！其他基本无改动
+        */
+        function draw()
+        {
+            webgl.clearColor(0.0,0.0,0.0,1.0);//黑色000
+            webgl.clear(webgl.COLOR_BUFFER_BIT);
+            webgl.drawArrays(webgl.POINTS,0,1);
+        }//绘制点
+    </script>
+</head>
+<body onload="init()">
+    <canvas id="webglCanvas" width="800" height="800"></canvas>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf8">
+        <title>只规定固定的标签的样式</title>
+        <style>
+            /*不受影响的部分*/
+            /* #paral{
+                text-align: center;
+                color: cornflowerblue;
+            } */
+            /* .center{
+                text-align: center;
+            } */
+            p.center{
+                text-align: center;
+            }/*因为只选择了p的样式，所以待会的h1标题不会受到影响*/
+        </style>
+    </head>
+    <body>
+        <!-- <p id="paral">hello cmy!</p>
+        <p>不受影响的部分！</p> -->
+        <h1 class="center">标题没影响</h1>
+        <p class="center">段落也居中</p>
+    </body>
+</html>

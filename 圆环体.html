@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+</head>
+
+<body>
+  <!--通过canvas标签创建一个800px*800px大小的画布-->
+  <canvas id="webgl" width="800" height="800"></canvas>
+  <script type="text/javascript" src="./cuon-matrix.js"></script>
+  <script>
+    //顶点着色器
+    var VSHADER_SOURCE = `
+      attribute vec3 position; //顶点位置信息
+      attribute vec4 color; //颜色
+      attribute vec3 normal; //法线
+      uniform mat4 uMvpMatrix; //模型视图投影矩阵
+      varying vec3 vNormal; //向片元着色器传值法线信息
+      varying vec4 vColor; //向片元着色器传值颜色信息
+      void main(){
+        vNormal = normal;
+        vColor = color;
+        gl_Position = uMvpMatrix*vec4(position,1.0); //将模型视图投影矩阵与顶点坐标相乘赋值给顶点着色器内置变量gl_Position
+      }
+      `
+
+    //片元着色器
+    var FSHADER_SOURCE = `
+      #ifdef GL_ES
+        precision mediump float; // 设置float类型为中精度
+      #endif
+      uniform mat4 uInvMatrix;//模型坐标变换矩阵的逆矩阵
+      uniform vec3 uLightDirection;//平行光方向
+      uniform vec4 uAmbientLightColor;//环境光颜色
+      uniform vec3 uEyeDirection;//视点方向
+      varying vec3 vNormal; //接收法线信息
+      varying vec4 vColor; //接收颜色信息
+      void main(){
+        vec3 invLight = normalize(uInvMatrix*vec4(uLightDirection,0.0)).xyz;
+        vec3 invEye = normalize(uInvMatrix*vec4(uEyeDirection,0.0)).xyz;
+        vec3 halfLE = normalize(invLight + invEye);//半程向量
+        float diffuse = clamp(dot(vNormal,invLight),0.0,1.0);//将结果限定在0.0~1.0内
+        float specular = pow(clamp(dot(vNormal, halfLE), 0.0, 1.0), 50.0);//计算高光
+        //颜色 = 顶点颜色 * 漫反射光 + 反射光 + 环境光
+        vec4 destColor = vColor*vec4(vec3(diffuse),1.0) + vec4(vec3(specular), 1.0)+uAmbientLightColor;
+        gl_FragColor = destColor;//将计算的颜色信息赋值给内置变量gl_FragColor
+      }
+    `
+
+    onload = function () {
+
+      //通过getElementById()方法获取canvas画布
+      var canvas = document.getElementById('webgl');
+
+      //通过方法getContext()获取WebGL上下文
+      var gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+
+
+      //创建程序对象
+      var prg = createProgram(VSHADER_SOURCE, FSHADER_SOURCE);
+
+      //获取顶点位置、法线、颜色的存储地址
+      var attLocations = {
+        position: gl.getAttribLocation(prg, 'position'),
+        normal: gl.getAttribLocation(prg, 'normal'),
+        color: gl.getAttribLocation(prg, 'color'),
+      }
+
+      //每个顶点属性的大小(分量数)
+      var attStrides = {
+        position: 3,
+        normal: 3,
+        color: 4,
+      }
+
+
+      // 生成绘制甜圈圈的信息
+      var torusData = torus(50, 50, 3.0, 8.0);
+
+      var position = torusData[0];
+      var normal = torusData[1];
+      var color = torusData[2];
+      var index = torusData[3];
+
+      // 创建存放顶点、法线、颜色的VBO
+      var vbos = {
+        position: create_vbo(position),
+        normal: create_vbo(normal),
+        color: create_vbo(color),
+      }
+
+      // 设置VBO
+      set_attribute(vbos, attLocations, attStrides);
+
+      // 创建IBO
+      var ibo = create_ibo(index);
+
+      // IBO绑定
+      gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+
+
+      //获取uniform变量模型视图投影矩阵、模型坐标变换矩阵的逆矩阵、平行光方向、环境光颜色、视角方向
+      var uniformLocations = {
+        uMvpMatrix: gl.getUniformLocation(prg, 'uMvpMatrix'),
+        uInvMatrix: gl.getUniformLocation(prg, 'uInvMatrix'),
+        uLightDirection: gl.getUniformLocation(prg, 'uLightDirection'),
+        uAmbientLightColor: gl.getUniformLocation(prg, 'uAmbientLightColor'),
+        uEyeDirection: gl.getUniformLocation(prg, 'uEyeDirection'),
+
+      }
+      //给顶点着色器uniform变量uLightDirection-平行光方向传值[-2.5, 3.5, 0.5]
+      gl.uniform3fv(uniformLocations.uLightDirection, [-2.5, 3.5, 0.5]);
+
+      //给顶点着色器uniform变量uAmbientLightColor- 环境光颜色传值(0.2, 0.1, 0.2, 1.0)
+      gl.uniform4f(uniformLocations.uAmbientLightColor, 0.2, 0.1, 0.2, 1.0);
+
+      //给顶点着色器uniform变量uEyeDirection-视点方向传值[0.0, 0.0, 20.0]
+      gl.uniform3fv(uniformLocations.uEyeDirection, [0.0, 0.0, 20.0]);
+
+
+      var currentAngle = [0.0, 0.0]; //当前旋转的角度[x-axis, y-axis]
+      var g_MvpMatrix = new Matrix4(); //模型视图投影矩阵 
+      var viewProjMatrix = new Matrix4(); //创建视图投影矩阵
+      var modelMatrix = new Matrix4(); //创建模型矩阵
+      var invMatrix = new Matrix4(); //创建模型矩阵
+
+      viewProjMatrix.setPerspective(45.0, canvas.width / canvas.height, 1.0, 100.0);
+      viewProjMatrix.lookAt(0.0, 20.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+
+      gl.enable(gl.DEPTH_TEST); //开启隐藏面消除
+      gl.depthFunc(gl.LEQUAL); //如果传入值小于或等于深度缓冲区值，则通过
+      gl.enable(gl.CULL_FACE); //激活多边形正反面剔除
+      var rotateSpeed = 0.1; // 自动旋转速度
+      (function tick() {
+
+        // gl初始化
+        gl.clearColor(0.0, 0.0, 0.0, 1.0); //指定调用 clear() 方法时使用的颜色值
+        gl.clearDepth(1.0); //设置深度清除值
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT); //清空颜色和深度缓冲区
+
+
+        //计算模型视图投影矩阵 
+        g_MvpMatrix.set(viewProjMatrix); //设置视图投影矩阵 
+
+        modelMatrix.setRotate(currentAngle[0], 1.0, 0.0, 0.0); //沿X轴旋转设置矩阵
+        modelMatrix.rotate(currentAngle[1], 0.0, 1.0, 0.0); //沿Y轴旋转设置矩阵
+
+        rotateSpeed += 0.3;
+        //modelMatrix.rotate(rotateSpeed, 0.0, 1.0, 1.0); //更新旋转矩阵
+
+        g_MvpMatrix.multiply(modelMatrix) //相乘模型变换矩阵
+
+        //计算模型坐标变换矩阵的逆矩阵
+        invMatrix.setInverseOf(modelMatrix)
+
+        //向着色器传值模型视图投影矩阵uMvpMatrix、模型坐标变换矩阵的逆矩阵uInvMatrix
+        gl.uniformMatrix4fv(uniformLocations.uMvpMatrix, false, g_MvpMatrix.elements);
+        gl.uniformMatrix4fv(uniformLocations.uInvMatrix, false, invMatrix.elements);
+
+
+        //绘图
+        gl.drawElements(gl.TRIANGLES, index.length, gl.UNSIGNED_SHORT, 0);
+
+        gl.flush();
+
+        requestAnimationFrame(tick)
+
+      })();
+
+      initEventHandlers(canvas, currentAngle) //注册鼠标事件
+
+      //创建程序对象
+      function createProgram(vshader, fshader) {
+
+        //创建顶点着色器对象
+        var vertexShader = loadShader(gl.VERTEX_SHADER, vshader);
+        //创建片元着色器对象
+        var fragmentShader = loadShader(gl.FRAGMENT_SHADER, fshader);
+
+        if (!vertexShader || !fragmentShader) {
+          return null
+        }
+
+        //创建程序对象program
+        var program = gl.createProgram();
+        if (!gl.createProgram()) {
+          return null
+        }
+
+        //分配顶点着色器和片元着色器到program
+        gl.attachShader(program, vertexShader);
+        gl.attachShader(program, fragmentShader);
+        //链接program
+        gl.linkProgram(program);
+
+        //检查程序对象是否连接成功
+        var linked = gl.getProgramParameter(program, gl.LINK_STATUS);
+        if (!linked) {
+          var error = gl.getProgramInfoLog(program);
+          console.log('程序对象连接失败: ' + error);
+          gl.deleteProgram(program);
+          gl.deleteShader(fragmentShader);
+          gl.deleteShader(vertexShader);
+          return null
+        }
+
+        //使用program
+        gl.useProgram(program);
+
+        gl.program = program;
+        //返回程序program对象
+        return program
+      }
+
+      function loadShader(type, source) {
+        // 创建顶点着色器对象
+        var shader = gl.createShader(type);
+        if (shader == null) {
+          console.log('创建着色器失败');
+          return null
+        }
+
+        // 引入着色器源代码
+        gl.shaderSource(shader, source);
+
+        // 编译着色器
+        gl.compileShader(shader);
+
+        // 检查顶是否编译成功
+        var compiled = gl.getShaderParameter(shader, gl.COMPILE_STATUS);
+        if (!compiled) {
+          var error = gl.getShaderInfoLog(shader);
+          console.log('编译着色器失败: ' + error);
+          gl.deleteShader(shader);
+          return null
+        }
+
+        return shader
+      }
+
+
+      function initEventHandlers(canvas, currentAngle) {
+        var dragging = false; //默认鼠标拖动不旋转物体
+        var lastX = -1,
+          lastY = -1; //鼠标最后的位置
+
+        canvas.onmousedown = function (ev) { //注册鼠标按下事件
+          var x = ev.clientX,
+            y = ev.clientY;
+
+          //鼠标在物体上开始拖动
+          var rect = ev.target.getBoundingClientRect();
+          if (rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom) {
+            lastX = x;
+            lastY = y;
+            dragging = true;
+          }
+        }
+
+        //鼠标松开拖动结束
+        canvas.onmouseup = function (ev) {
+          dragging = false;
+        }
+
+        canvas.onmousemove = function (ev) { //注册鼠标移动事件
+          var x = ev.clientX,
+            y = ev.clientY;
+          if (dragging) {
+            var factor = 100 / canvas.height; //旋转因子
+            var dx = factor * (x - lastX);
+            var dy = factor * (y - lastY);
+            //沿Y轴的旋转角度控制在-90到90度之间
+            currentAngle[0] = Math.max(Math.min(currentAngle[0] + dy, 90.0), -90.0);
+            currentAngle[1] = currentAngle[1] + dx;
+          }
+          lastX = x;
+          lastY = y;
+        }
+      }
+
+      // 创建VBO
+      function create_vbo(data) {
+        //创建缓冲区对象
+        var vbo = gl.createBuffer();
+
+        //绑定缓冲区到ARRAY_BUFFER
+        gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
+
+        //将数据写入缓冲区对象
+        gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(data), gl.STATIC_DRAW);
+
+        //解绑缓冲区
+        gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+        return vbo
+      }
+
+
+      // 向VBO写入数据
+      function set_attribute(vbo, attLocation, attStride) {
+
+        for (var key in vbo) {
+          //绑定缓冲区到ARRAY_BUFFER
+          gl.bindBuffer(gl.ARRAY_BUFFER, vbo[key]);
+
+          //分配缓存区到指定地址
+          gl.vertexAttribPointer(attLocation[key], attStride[key], gl.FLOAT, false, 0, 0);
+
+          //开启缓冲区
+          gl.enableVertexAttribArray(attLocation[key]);
+        }
+      }
+
+      // 创建IBO
+      function create_ibo(data) {
+        //创建缓冲区对象
+        var ibo = gl.createBuffer();
+
+        //绑定缓冲区到ELEMENT_ARRAY_BUFFER
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+
+        //将数据写入缓冲区对象
+        gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Int16Array(data), gl.STATIC_DRAW);
+
+        //解绑缓冲区
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+        return ibo;
+      }
+
+      //生成甜圈圈
+      //第一个参数表示管道截面圆分段数，第二个参数表示管道圆的分段数，
+      //第三个参数管道截面圆的半径。第四个参数表示从管道中心到管道截面圆中心的距离
+      function torus(row, column, irad, orad) {
+        var position = new Array(),
+          normal = new Array(),
+          color = new Array(),
+          index = new Array();
+        for (var i = 0; i <= row; i++) {
+          var r = Math.PI * 2 / row * i; //管道圆上每个分段的弧度
+          var rr = Math.cos(r);
+          var ry = Math.sin(r);
+          for (var ii = 0; ii <= column; ii++) {
+            var tr = Math.PI * 2 / column * ii;
+            //每个顶点位置的x、y、z分量
+            var tx = (rr * irad + orad) * Math.cos(tr);
+            var ty = ry * irad;
+            var tz = (rr * irad + orad) * Math.sin(tr);
+
+            var rx = rr * Math.cos(tr);
+            var rz = rr * Math.sin(tr);
+            position.push(tx, ty, tz);
+            normal.push(rx, ry, rz);
+            var tc = hsva(360 / column * ii, 1, 1, 1);
+            color.push(tc[0], tc[1], tc[2], tc[3]);
+          }
+        }
+        for (i = 0; i < row; i++) {
+          for (ii = 0; ii < column; ii++) {
+            r = (column + 1) * i + ii;
+            index.push(r, r + column + 1, r + 1);
+            index.push(r + column + 1, r + column + 2, r + 1);
+          }
+        }
+        return [position, normal, color, index];
+      }
+
+      //将HSV颜色转换为RGB颜色
+      function hsva(h, s, v, a) {
+        if (s > 1 || v > 1 || a > 1) {
+          return;
+        }
+        var th = h % 360;
+        var i = Math.floor(th / 60);
+        var f = th / 60 - i;
+        var m = v * (1 - s);
+        var n = v * (1 - s * f);
+        var k = v * (1 - s * (1 - f));
+        var color = new Array();
+        if (!s > 0 && !s < 0) {
+          color.push(v, v, v, a);
+        } else {
+          var r = new Array(v, n, m, m, k, v);
+          var g = new Array(k, v, v, n, m, m);
+          var b = new Array(m, m, k, v, v, n);
+          color.push(r[i], g[i], b[i], a);
+        }
+        return color;
+      }
+
+    }
+  </script>
+</body>
+</html>

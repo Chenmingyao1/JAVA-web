@@ -1,0 +1,10 @@
+body{
+    /* background-image: url('https://ts1.cn.mm.bing.net/th/id/R-C.d90a4aa914c8570fe7fbd51baaafad3b?rik=JYsewfnyzJU4sQ&riu=http%3a%2f%2fpic.zsucai.com%2ffiles%2f2013%2f0716%2fpgjlg1.jpg&ehk=wyM6zTGMio8WyB7gJrCCQAo%2bLdv8PiaBoPvzoxA8UYU%3d&risl=&pid=ImgRaw&r=0'); */
+    /*如果是本地图像应该如下设置,记得照片路径要在这一个小的文件夹里面，不然会找不到*/
+background-image: url(./background.jpeg);
+background-size:1580px 1000px;/*设置背景图像的大小*/
+}
+#meili{
+    text-align: center;
+    color: darkblue;
+}

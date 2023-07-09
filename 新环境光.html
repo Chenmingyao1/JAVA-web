@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>环境光各种参数调节</title>
+    <style>
+        #container {
+          position: absolute;
+          width: 100%;
+          height: 100%;
+        }
+        .controls-box {
+          position: absolute;
+          right: 5px;
+          top: 5px;
+          width: 300px;
+          padding: 10px;
+          background-color: #fff;
+          border: 1px solid #c3c3c3;
+        }
+        .label-col {
+          padding: 8px 5px;
+        }
+        .color-select-layer {
+          position: relative;
+          left: -20px;
+          padding: 15px 0;
+        }
+        </style>
+    <template>
+        <div>
+          <div id="container"></div>
+          <div class="controls-box">
+            <el-checkbox v-model="ambientLightVisible">是否展示环境光</el-checkbox>
+            <el-col :span="8" class="label-col"><label> 环境光颜色</label></el-col>
+            <el-col :span="16">
+              <div @click="colorInputClick">
+                <el-input disabled :value="ambientLightcolor" @click="colorInputClick"></el-input>
+              </div>
+              <div v-show="isShowColors" class="color-select-layer">
+                <sketch-picker v-model="ambientLightcolor" @input="colorValueChange"></sketch-picker>
+              </div>
+            </el-col>
+      
+          </div>
+        </div>
+      </template>
+      
+  <script src="./gl-matrix.js"></script>
+  <script src="./three.js-master/three.js-master/build/three.js"></script>
+  <script src="./three.js-master/three.js-master/build/three.module.js"></script>
+  <script src="https://threejsfundamentals.org/threejs/resources/threejs/r122/examples/jsm/controls/OrbitControls.js"></script>
+  <script>
+    
+  export default {
+    components: {
+      'sketch-picker': Sketch
+    },
+    data () {
+      return {
+        ambientLightVisible: true,
+        isShowColors: true,
+        ambientLightcolor: '#063610',
+        rotationSpeed: 0.02,
+        bouncingSpeed: 0,
+        cube: null,
+        sphere: null,
+        ambientLight: null,
+        camera: null,
+        scene: null,
+        renderer: null,
+        controls: null
+      }
+    },
+    mounted () {
+      this.init()
+    },
+    methods: {
+      colorInputClick () {
+        this.isShowColors = !this.isShowColors
+      },
+      colorValueChange (val) {
+        //console.log(val)
+        this.ambientLightcolor = val.hex
+      },
+      // 初始化
+      init () {
+        this.createScene() // 创建场景
+        this.createMesh() // 创建网格模型
+        this.createCubeAndSphere() // 创建方块和球
+        this.createLight() // 创建光源
+        this.createCamera() // 创建相机
+        this.createRender() // 创建渲染器
+        this.createControls() // 创建控件对象
+        this.render() // 渲染
+      },
+      // 创建场景
+      createScene () {
+        this.scene = new THREE.Scene()
+      },
+      // 创建网格模型
+      createMesh () {
+        const planeGeometry = new THREE.PlaneGeometry(60, 20, 1, 1) // 创建一个平面对象PlaneGeometry
+        const planeMaterial = new THREE.MeshLambertMaterial({
+          color: 0xffffff
+        }) // 材质对象Material
+        const plane = new THREE.Mesh(planeGeometry, planeMaterial)
+        plane.receiveShadow = true
+  
+        // 设置平面位置
+        plane.rotation.x = -0.5 * Math.PI
+        plane.position.set(15, 0, 0)
+  
+        // 平面对象添加到场景中
+        this.scene.add(plane)
+      },
+      // 创建方块和球
+      createCubeAndSphere () {
+        const geom = new THREE.BoxGeometry(4, 4, 4) // 创建几何对象geom
+        const material = new THREE.MeshLambertMaterial({ color: 0xff0000 }) // 创建材质对象material
+        this.cube = new THREE.Mesh(geom, material) // 创建网格对象cube
+        this.cube.castShadow = true
+        this.cube.position.set(-4, 3, 2)
+        this.scene.add(this.cube) // 将网格对象添加到场景
+  
+        const sphereGeometry = new THREE.SphereGeometry(4, 20, 20) // 创建几何对象sphereGeometry
+        const sphereMaterial = new THREE.MeshLambertMaterial({ color: 0x7777ff }) // 创建材质对象sphereMaterial
+        this.sphere = new THREE.Mesh(sphereGeometry, sphereMaterial) // 创建网格对象sphere
+        this.sphere.castShadow = true
+        this.sphere.position.set(20, 5, 2)
+        this.scene.add(this.sphere) // 将网格对象添加到场景
+      },
+      // 创建光源
+      createLight () {
+        // 添加聚光灯
+        const spotLight = new THREE.SpotLight(0xfafafa)
+        spotLight.position.set(-40, 80, -10)
+        spotLight.castShadow = true
+        this.scene.add(spotLight) // 聚光灯添加到场景中
+  
+        // 环境光
+        this.ambientLight = new THREE.AmbientLight(0x0c0c0c) // 创建环境光
+        this.scene.add(this.ambientLight) // 将环境光添加到场景
+      },
+      // 创建相机
+      createCamera () {
+        const element = document.getElementById('container')
+        const width = element.clientWidth // 窗口宽度
+        const height = element.clientHeight // 窗口高度
+        const k = width / height // 窗口宽高比
+        // PerspectiveCamera( fov, aspect, near, far )
+        this.camera = new THREE.PerspectiveCamera(45, k, 0.1, 1000)
+  
+        this.camera.position.set(-25, 30, 25) // 设置相机位置
+        this.camera.lookAt(new THREE.Vector3(10, 0, 0)) // 设置相机方向
+        this.scene.add(this.camera)
+      },
+      // 创建渲染器
+      createRender () {
+        const element = document.getElementById('container')
+        this.renderer = new THREE.WebGLRenderer()
+        this.renderer.setSize(element.clientWidth, element.clientHeight) // 设置渲染区域尺寸
+        this.renderer.setClearColor(0x3f3f3f, 1) // 设置背景颜色
+        element.appendChild(this.renderer.domElement)
+      },
+      // 更新属性
+      updateFun () {
+        // 方块旋转
+        this.cube.rotation.x += this.rotationSpeed
+        this.cube.rotation.y += this.rotationSpeed
+        this.cube.rotation.z += this.rotationSpeed
+  
+        // 球上下跳动
+  
+        this.bouncingSpeed += 0.03
+        this.sphere.position.x = 20 + 10 * Math.cos(this.bouncingSpeed)
+        this.sphere.position.y = 2 + 10 * Math.abs(Math.sin(this.bouncingSpeed))
+  
+        // 光源颜色更新
+        this.ambientLight.color = new THREE.Color(this.ambientLightcolor)
+        this.ambientLight.visible = this.ambientLightVisible
+      },
+      render () {
+        this.updateFun()
+        this.renderer.render(this.scene, this.camera)
+        requestAnimationFrame(this.render)
+      },
+      // 创建控件对象
+      createControls () {
+        this.controls = new OrbitControls(this.camera, this.renderer.domElement)
+      }
+    }
+  }
+  </script>
+  </head>
+
+  <body>
+      
+  </body>
+  </html>
+  
+  
+  

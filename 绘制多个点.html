@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>绘制多个点</title>
+    <script src="./glMatrix-0.9.6.js"></script>
+    <script>
+        //js代码
+        var webgl;
+       
+        var projMat4=mat4.create();
+        var vertexString = `attribute vec4 a_position;
+        uniform mat4 proj;
+        void main(void)
+        {
+            gl_Position=a_position;//这里变了！
+            gl_PointSize=60.0;
+        }`;
+        var fragmentString=`
+        void main(void){
+            gl_FragColor=vec4(0,1.0,1.0,1.0);
+        }
+        `;
+        function init(){
+            initWebGL();
+            initShader();
+            initBuffer();
+            //draw();
+        }
+        function initWebGL(){
+            let webglDiv=document.getElementById("webglCanvas");
+            webgl=webglDiv.getContext("webgl");
+            webgl.viewport(0,0,webglDiv.clientWidth,webglDiv.clientHeight);
+            mat4.ortho(0,webglDiv.clientWidth,webglDiv.clientHeight,0,-1.0,1.0,projMat4);//����ϵ
+        }
+        function initShader(){
+            let vsshader=webgl.createShader(webgl.VERTEX_SHADER);
+            let fsshader=webgl.createShader(webgl.FRAGMENT_SHADER);
+
+            webgl.shaderSource(vsshader,vertexString);
+            webgl.shaderSource(fsshader,fragmentString);
+            
+            webgl.compileShader(vsshader);
+            webgl.compileShader(fsshader);
+
+            let program=webgl.createProgram();
+            webgl.attachShader(program,vsshader);
+            webgl.attachShader(program,fsshader);
+
+            webgl.linkProgram(program);
+            webgl.useProgram(program);
+
+            webgl.program=program;
+        }//shader
+        var points=[];
+        function initBuffer(){ 
+            let aPosition=webgl.getAttribLocation(webgl.program,"a_position");
+            
+            document.addEventListener("mousedown",function(e){
+                let x=e.clientX;
+                let y=e.clientY;
+                //找到鼠标所点处的矩形框的中心点坐标
+                let rect=e.target.getBoundingClientRect();
+                let top=rect.top;
+                let left=rect.left;
+                let pointx=((x-left)-512)/512;
+                let pointy=-((y-top)-(768/2))/(768/2);//记住负号！
+                points.push(pointx);
+                points.push(pointy);
+                points.push(0);
+                points.push(1.0);
+                let pointPosition=new Float32Array(points);
+                let pointBuffer=webgl.createBuffer();
+                webgl.bindBuffer(webgl.ARRAY_BUFFER,pointBuffer);
+                webgl.bufferData(webgl.ARRAY_BUFFER,pointPosition,webgl.STATIC_DRAW);
+                webgl.enableVertexAttribArray(aPosition);
+                webgl.vertexAttribPointer(aPosition,4,webgl.FLOAT,false,4*4,0*4);
+                webgl.clearColor(0.0,0.0,0.0,1.0);//��ɫ000
+                webgl.clear(webgl.COLOR_BUFFER_BIT|webgl.DEPTH_BUFFER_BIT);
+                webgl.drawArrays(webgl.points,0,points.length);
+            })
+            let uniformProj=webgl.getUniformLocation(webgl.program,"proj");
+            webgl.uniformMatrix4fv(uniformProj,false,projMat4);
+        }//���ݻ�������ʼ������
+        /*
+        initBuffer()��draw()�仯�����������޸Ķ�
+        */
+        function draw()
+        {
+           
+        }//���Ƶ�
+    </script>
+</head>
+<body onload="init()">
+    <canvas id="webglCanvas" width="1024" height="768"></canvas>
+</body>
+</html>

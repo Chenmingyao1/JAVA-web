@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>绘制要点</title>
+</head>
+<body style="background-color:rgb(239, 239, 149)">
+    <font size="6">
+        <p align="center">绘制前须知</p>
+    </font>
+    <font size="5">
+        <p  style = "color:rgb(244, 19, 102); margin-left:50px;margin-top: 0px;">
+            WebGL绘制基础的点、线、面、体，和OpenGL的绘制函数有很多重复的地方，但是WebGL采用JavaScript语言进行编写，页面由HTML5（现代浏览器的标准语言）编写，JavaScript应用程序和着色器都在"script和/script"之间，HTML canvas元素为在浏览器上执行的应用程序提供一个画布，图形会在canvas上面加载显示。然后就是坐标系，用户的坐标系被称作世界坐标系，应用程序中度量顶点位置的数值称作顶点坐标，大多数应用程序中，顶点坐标与世界坐标一致，而用显示器上的单位度量出的数值起初叫做物理设备坐标，也叫屏幕坐标，这个总是用整数来类型表示，因为离散性是像素的固有属性，在图像生成的某个阶段中，顶点坐标必须映射成屏幕坐标，此过程由图形系统来完成，而不是程序员。</p>
+            <p style="margin-top:40px;text-align: center;">WebGL、OpenGL、Three.js三者之间的关系</p>
+            <p style="text-align: center;">
+                <img border="0" src="/assets/关系图.png" alt="Pulpit rock" width="893" height="218">
+            </p>
+            
+    
+        </font>
+   
+</body>
+
+</html> 
